@@ -1,5 +1,8 @@
 import { useAria2 } from "../context/Aria2Provider";
+import { useToast } from "./Toasts";
 import { useMemo } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   EraserIcon,
   GearIcon,
@@ -7,6 +10,7 @@ import {
   PlayIcon,
   PlusIcon,
   SearchIcon,
+  TorrentIcon,
 } from "../lib/icons";
 
 interface Props {
@@ -18,6 +22,22 @@ interface Props {
 
 export default function Toolbar({ query, onQuery, onNew, onSettings }: Props) {
   const { snapshot, pauseAll, resumeAll, clearFinished, connected } = useAria2();
+  const { push } = useToast();
+
+  const addTorrent = async () => {
+    const path = await open({
+      filters: [{ name: "Torrent", extensions: ["torrent"] }],
+      title: "Choose a .torrent file",
+      multiple: false,
+    });
+    if (typeof path !== "string") return;
+    try {
+      await invoke("add_torrent", { path, dir: null });
+      push("Torrent added", "success");
+    } catch (e) {
+      push(`Failed to add torrent: ${e}`, "error");
+    }
+  };
 
   const hasActive = useMemo(
     () => snapshot.downloads.some((d) => d.status === "active"),
@@ -36,6 +56,11 @@ export default function Toolbar({ query, onQuery, onNew, onSettings }: Props) {
       <button className="btn btn-primary" onClick={onNew}>
         <PlusIcon width={16} height={16} />
         New download
+      </button>
+
+      <button className="btn" onClick={addTorrent} disabled={!connected} title="Add .torrent file">
+        <TorrentIcon width={15} height={15} />
+        Torrent
       </button>
 
       <div className="search">

@@ -122,6 +122,21 @@ impl RpcClient {
             .ok_or_else(|| "aria2 did not return a GID".into())
     }
 
+    /// Add a torrent from its base64-encoded contents.
+    pub fn add_torrent(&self, torrent_base64: &str, options: Option<Value>) -> Result<String, String> {
+        let mut params = self.with_token();
+        params.push(Value::String(torrent_base64.to_string()));
+        params.push(Value::Array(vec![])); // extra tracker uris
+        if let Some(opts) = options {
+            params.push(opts);
+        }
+        let result = self.request("aria2.addTorrent", params)?;
+        result
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| "aria2 did not return a GID".into())
+    }
+
     pub fn pause(&self, gid: &str) -> Result<(), String> {
         self.void_gid("aria2.pause", gid)
     }

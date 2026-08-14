@@ -193,6 +193,53 @@ async fn clear_finished(state: tauri::State<'_, AppState>) -> Result<(), String>
     .map_err(|e| e.to_string())?
 }
 
+/// Add a .torrent file from disk. Magnet links work via add_download.
+#[tauri::command]
+async fn add_torrent(
+    path: String,
+    dir: Option<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<String, String> {
+    let client = state.client()?;
+    let sync = state.sync.clone();
+    let defaults = state.settings.lock().unwrap().clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        use base64::Engine as _;
+        let bytes = std::fs::read(&path)
+            .map_err(|e| format!("failed to read torrent file: {e}"))?;
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+
+        let mut options = serde_json::Map::new();
+        let dir = dir.or(if defaults.default_dir.is_empty() {
+            None
+        } else {
+            Some(defaults.default_dir.clone())
+        });
+        if let Some(dir) = dir.as_ref() {
+            std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+            options.insert("dir".into(), Value::String(dir.clone()));
+        }
+        options.insert("split".into(), Value::String(defaults.default_split.to_string()));
+
+        let opts = if options.is_empty() {
+            None
+        } else {
+            Some(Value::Object(options))
+        };
+
+        let gid = client.add_torrent(&b64, opts)?;
+        sync.created
+            .lock()
+            .unwrap()
+            .insert(gid.clone(), sync::now());
+
+        Ok::<String, String>(gid)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 fn get_settings(state: tauri::State<AppState>) -> Settings {
     state.settings.lock().unwrap().clone()
@@ -325,6 +372,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_snapshot,
             add_download,
+            add_torrent,
             pause_download,
             resume_download,
             pause_all,
