@@ -106,6 +106,7 @@ export default function Toolbar({
       <div className="search">
         <SearchIcon width={15} height={15} />
         <input
+          id="download-search"
           value={query}
           onChange={(e) => onQuery(e.target.value)}
           placeholder="Search downloads…"

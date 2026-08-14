@@ -5,11 +5,12 @@ import { CloseIcon, DownloadIcon, FolderIcon } from "../lib/icons";
 
 interface Props {
   onClose: () => void;
+  initialUri?: string;
 }
 
-export default function NewDownloadModal({ onClose }: Props) {
+export default function NewDownloadModal({ onClose, initialUri }: Props) {
   const { addDownload } = useAria2();
-  const [uris, setUris] = useState("");
+  const [uris, setUris] = useState(initialUri ?? "");
   const [dir, setDir] = useState("");
   const [out, setOut] = useState("");
   const [split, setSplit] = useState(16);

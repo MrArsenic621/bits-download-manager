@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useAria2 } from "./context/Aria2Provider";
 import type { Download, FilterKey, SortKey } from "./types";
 import Sidebar from "./components/Sidebar";
@@ -9,14 +10,25 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import SettingsModal from "./components/SettingsModal";
 import { PauseIcon, PlayIcon, CloseIcon, TrashIcon } from "./lib/icons";
 
+const URL_RE =
+  /(https?:\/\/[^\s<>"']+|magnet:\?[^\s<>"']+)/i;
+
+function extractUrl(text: string): string | null {
+  const m = text.match(URL_RE);
+  if (!m) return null;
+  return m[1].replace(/[.,;:!?]+$/, "");
+}
+
 export default function App() {
-  const { del, remove, pause, resume, snapshot } = useAria2();
+  const { del, remove, pause, resume, snapshot, settings } = useAria2();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [newOpen, setNewOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [clipboardUrl, setClipboardUrl] = useState<string | null>(null);
+  const lastDetected = useRef<string>("");
   const [confirm, setConfirm] = useState<{
     title: string;
     message: React.ReactNode;
@@ -35,6 +47,49 @@ export default function App() {
       return next.size === prev.size ? prev : next;
     });
   }, [liveGids]);
+
+  // Keyboard shortcuts: Ctrl+N new download, Ctrl+F search, Esc close/clear.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        setNewOpen(true);
+      } else if (mod && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        const el = document.getElementById("download-search") as HTMLInputElement | null;
+        el?.focus();
+        el?.select();
+      } else if (e.key === "Escape") {
+        setConfirm(null);
+        setNewOpen(false);
+        setSettingsOpen(false);
+        setSelected(new Set());
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Clipboard watcher: suggest adding copied URLs / magnet links.
+  useEffect(() => {
+    if (!settings?.watch_clipboard) return;
+    const tick = async () => {
+      if (!document.hasFocus() || clipboardUrl) return;
+      try {
+        const text = await readText();
+        const url = extractUrl(text);
+        if (url && url !== lastDetected.current) {
+          lastDetected.current = url;
+          setClipboardUrl(url);
+        }
+      } catch {
+        // clipboard unreadable; ignore
+      }
+    };
+    const id = setInterval(tick, 2000);
+    return () => clearInterval(id);
+  }, [settings?.watch_clipboard, clipboardUrl]);
 
   const toggleSelect = (gid: string) =>
     setSelected((prev) => {
@@ -137,7 +192,15 @@ export default function App() {
         </div>
       </main>
 
-      {newOpen && <NewDownloadModal onClose={() => setNewOpen(false)} />}
+      {newOpen && (
+        <NewDownloadModal
+          initialUri={clipboardUrl ?? undefined}
+          onClose={() => {
+            setNewOpen(false);
+            setClipboardUrl(null);
+          }}
+        />
+      )}
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
 
@@ -149,6 +212,29 @@ export default function App() {
           onConfirm={confirm.onConfirm}
           onCancel={() => setConfirm(null)}
         />
+      )}
+
+      {clipboardUrl && !newOpen && (
+        <div className="clipboard-chip">
+          <div className="chip-text">
+            <span className="chip-title">Link detected</span>
+            <span className="chip-url" title={clipboardUrl}>
+              {clipboardUrl}
+            </span>
+          </div>
+          <div className="chip-actions">
+            <button className="btn btn-sm btn-primary" onClick={() => setNewOpen(true)}>
+              Add
+            </button>
+            <button
+              className="icon-btn"
+              onClick={() => setClipboardUrl(null)}
+              title="Dismiss"
+            >
+              <CloseIcon width={15} height={15} />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
