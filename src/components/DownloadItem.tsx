@@ -6,6 +6,7 @@ import {
   AlertIcon,
   CheckCircleIcon,
   DownloadIcon,
+  FileIcon,
   FolderIcon,
   PauseIcon,
   PlayIcon,
@@ -58,6 +59,13 @@ export default function DownloadItem({ download: d, onDelete }: Props) {
     if (d.dir) void openPath(d.dir);
   };
 
+  const openFile = () => {
+    const filePath = d.dir
+      ? `${d.dir.replace(/[\\/]+$/, "")}\\${d.filename}`
+      : d.filename;
+    if (filePath) void openPath(filePath);
+  };
+
   const retry = () => {
     void remove(d.gid);
     void addDownload({
@@ -93,8 +101,8 @@ export default function DownloadItem({ download: d, onDelete }: Props) {
     }
     if (isComplete) {
       return (
-        <button className="icon-btn" onClick={openFolder} title="Open folder">
-          <FolderIcon width={16} height={16} />
+        <button className="icon-btn" onClick={openFile} title="Open file">
+          <FileIcon width={16} height={16} />
         </button>
       );
     }
@@ -189,6 +197,11 @@ export default function DownloadItem({ download: d, onDelete }: Props) {
 
       <div className="item-actions">
         {primaryAction()}
+        {isComplete && (
+          <button className="icon-btn" onClick={openFolder} title="Open folder">
+            <FolderIcon width={16} height={16} />
+          </button>
+        )}
         {!isComplete && (
           <button
             className="icon-btn"

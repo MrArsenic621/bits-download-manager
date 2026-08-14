@@ -8,7 +8,12 @@ import {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { Settings, Snapshot } from "../types";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
+import type { Download, Settings, Snapshot } from "../types";
 
 export interface AddDownloadOptions {
   uri: string;
@@ -66,17 +71,49 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
   const [connected, setConnected] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
   const seenGids = useRef<Set<string>>(new Set());
+  const prevStatuses = useRef<Map<string, string>>(new Map());
+  const settingsRef = useRef<Settings | null>(null);
+  settingsRef.current = settings;
 
-  const apply = useCallback((payload: unknown) => {
-    if (isSnapshot(payload)) {
-      setSnapshot(payload);
-      setConnected(payload.startup_error == null);
-      setLastError(payload.startup_error);
-      payload.downloads.forEach((d) => seenGids.current.add(d.gid));
-    } else {
-      setConnected(false);
+  const notifyComplete = useCallback(async (d: Download) => {
+    try {
+      let granted = await isPermissionGranted();
+      if (!granted) {
+        granted = (await requestPermission()) === "granted";
+      }
+      if (granted) {
+        sendNotification({
+          title: "Download complete",
+          body: d.filename || d.uri,
+        });
+      }
+    } catch {
+      // notifications unsupported; ignore
     }
   }, []);
+
+  const apply = useCallback(
+    (payload: unknown) => {
+      if (isSnapshot(payload)) {
+        setSnapshot(payload);
+        setConnected(payload.startup_error == null);
+        setLastError(payload.startup_error);
+        payload.downloads.forEach((d) => {
+          seenGids.current.add(d.gid);
+          const prev = prevStatuses.current.get(d.gid);
+          if (prev && prev !== "complete" && d.status === "complete") {
+            if (settingsRef.current?.notify_on_complete) {
+              void notifyComplete(d);
+            }
+          }
+          prevStatuses.current.set(d.gid, d.status);
+        });
+      } else {
+        setConnected(false);
+      }
+    },
+    [notifyComplete],
+  );
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
