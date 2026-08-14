@@ -24,13 +24,21 @@ const STATUS_LABEL: Record<string, string> = {
 
 const FALLBACK_OPTIONS: Partial<AddDownloadOptions> = { split: 16 };
 
+const SPEED_LIMITS: { label: string; value: number }[] = [
+  { label: "∞", value: 0 },
+  { label: "100 KB/s", value: 100 * 1024 },
+  { label: "500 KB/s", value: 500 * 1024 },
+  { label: "1 MB/s", value: 1024 * 1024 },
+  { label: "5 MB/s", value: 5 * 1024 * 1024 },
+];
+
 interface Props {
   download: Download;
   onDelete: (d: Download) => void;
 }
 
 export default function DownloadItem({ download: d, onDelete }: Props) {
-  const { pause, resume, remove, addDownload } = useAria2();
+  const { pause, resume, remove, addDownload, setSpeedLimit } = useAria2();
 
   const statusLabel = STATUS_LABEL[d.status] ?? d.status;
   const isActive = d.status === "active";
@@ -127,6 +135,21 @@ export default function DownloadItem({ download: d, onDelete }: Props) {
     ? `Error: ${d.error_message}`
     : d.uri || hostOf(d.uri);
 
+  const speedSelect = isActive ? (
+    <select
+      className="speed-limit"
+      defaultValue="0"
+      onChange={(e) => void setSpeedLimit(d.gid, Number(e.target.value))}
+      title="Speed limit"
+    >
+      {SPEED_LIMITS.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  ) : null;
+
   return (
     <article className={`download-item status-${d.status}`}>
       <div className="item-icon">{statusIcon()}</div>
@@ -160,6 +183,7 @@ export default function DownloadItem({ download: d, onDelete }: Props) {
               {m}
             </span>
           ))}
+          {speedSelect}
         </div>
       </div>
 

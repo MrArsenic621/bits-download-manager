@@ -8,7 +8,7 @@ import {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { Snapshot } from "../types";
+import type { Settings, Snapshot } from "../types";
 
 export interface AddDownloadOptions {
   uri: string;
@@ -21,6 +21,7 @@ interface Aria2ContextType {
   snapshot: Snapshot;
   connected: boolean;
   lastError: string | null;
+  settings: Settings | null;
   addDownload: (opts: AddDownloadOptions) => Promise<string>;
   pause: (gid: string) => Promise<void>;
   resume: (gid: string) => Promise<void>;
@@ -29,6 +30,8 @@ interface Aria2ContextType {
   pauseAll: () => Promise<void>;
   resumeAll: () => Promise<void>;
   clearFinished: () => Promise<void>;
+  updateSettings: (settings: Settings) => Promise<void>;
+  setSpeedLimit: (gid: string, limit: number) => Promise<void>;
 }
 
 const Aria2Context = createContext<Aria2ContextType | undefined>(undefined);
@@ -61,6 +64,7 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
   const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY);
   const [lastError, setLastError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const seenGids = useRef<Set<string>>(new Set());
 
   const apply = useCallback((payload: unknown) => {
@@ -81,6 +85,12 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
     invoke("get_snapshot")
       .then((s) => {
         if (!cancelled) apply(s);
+      })
+      .catch((e) => setLastError(String(e)));
+
+    invoke<Settings>("get_settings")
+      .then((s) => {
+        if (!cancelled) setSettings(s);
       })
       .catch((e) => setLastError(String(e)));
 
@@ -144,12 +154,24 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
     [],
   );
 
+  const updateSettings = useCallback(async (next: Settings) => {
+    await invoke("update_settings", { settings: next });
+    setSettings(next);
+  }, []);
+
+  const setSpeedLimit = useCallback(
+    (gid: string, limit: number) =>
+      invoke("set_speed_limit", { gid, limit }) as Promise<void>,
+    [],
+  );
+
   return (
     <Aria2Context.Provider
       value={{
         snapshot,
         connected,
         lastError,
+        settings,
         addDownload,
         pause,
         resume,
@@ -158,6 +180,8 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
         pauseAll,
         resumeAll,
         clearFinished,
+        updateSettings,
+        setSpeedLimit,
       }}
     >
       {children}

@@ -2,6 +2,7 @@ import { useAria2 } from "../context/Aria2Provider";
 import { useMemo } from "react";
 import {
   EraserIcon,
+  GearIcon,
   PauseIcon,
   PlayIcon,
   PlusIcon,
@@ -12,9 +13,10 @@ interface Props {
   query: string;
   onQuery: (q: string) => void;
   onNew: () => void;
+  onSettings: () => void;
 }
 
-export default function Toolbar({ query, onQuery, onNew }: Props) {
+export default function Toolbar({ query, onQuery, onNew, onSettings }: Props) {
   const { snapshot, pauseAll, resumeAll, clearFinished, connected } = useAria2();
 
   const hasActive = useMemo(
@@ -70,6 +72,9 @@ export default function Toolbar({ query, onQuery, onNew }: Props) {
           title="Clear finished"
         >
           <EraserIcon width={15} height={15} />
+        </button>
+        <button className="btn" onClick={onSettings} title="Settings">
+          <GearIcon width={15} height={15} />
         </button>
       </div>
     </header>

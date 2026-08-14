@@ -51,6 +51,32 @@ impl Default for GlobalStat {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Settings {
+    /// Empty string means "system Downloads folder".
+    pub default_dir: String,
+    pub default_split: u32,
+    pub max_concurrent_downloads: u32,
+    /// Global overall download speed limit in bytes/sec. 0 = unlimited.
+    pub global_speed_limit: u64,
+    pub notify_on_complete: bool,
+    pub watch_clipboard: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            default_dir: String::new(),
+            default_split: 16,
+            max_concurrent_downloads: 3,
+            global_speed_limit: 0,
+            notify_on_complete: true,
+            watch_clipboard: true,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Snapshot {
     pub downloads: Vec<Download>,

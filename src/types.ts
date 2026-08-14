@@ -44,3 +44,12 @@ export type FilterKey =
   | "paused"
   | "complete"
   | "error";
+
+export interface Settings {
+  default_dir: string;
+  default_split: number;
+  max_concurrent_downloads: number;
+  global_speed_limit: number;
+  notify_on_complete: boolean;
+  watch_clipboard: boolean;
+}

@@ -11,6 +11,7 @@ use std::{
     },
     time::Duration,
 };
+use crate::model::Settings;
 use tauri::{AppHandle, Manager};
 
 const RPC_KEYS: [&str; 13] = [
@@ -141,6 +142,21 @@ impl RpcClient {
         self.request("aria2.pauseAll", self.with_token()).map(|_| ())
     }
 
+    /// Change options for a specific download (e.g. speed limits).
+    pub fn change_option(&self, gid: &str, options: Value) -> Result<(), String> {
+        let mut params = self.with_token();
+        params.push(Value::String(gid.to_string()));
+        params.push(options);
+        self.request("aria2.changeOption", params).map(|_| ())
+    }
+
+    /// Change global options at runtime (concurrency, overall speed limit).
+    pub fn change_global_option(&self, options: Value) -> Result<(), String> {
+        let mut params = self.with_token();
+        params.push(options);
+        self.request("aria2.changeGlobalOption", params).map(|_| ())
+    }
+
     pub fn unpause_all(&self) -> Result<(), String> {
         self.request("aria2.unpauseAll", self.with_token()).map(|_| ())
     }
@@ -223,7 +239,7 @@ pub struct Aria2Process {
 
 impl Aria2Process {
     /// Start (or reuse) the aria2 daemon and return an RPC client bound to it.
-    pub fn start(app: &AppHandle) -> Result<(Arc<RpcClient>, Self), String> {
+    pub fn start(app: &AppHandle, settings: &Settings) -> Result<(Arc<RpcClient>, Self), String> {
         let app_data = app
             .path()
             .app_data_dir()
@@ -261,7 +277,11 @@ impl Aria2Process {
             .map(char::from)
             .collect();
 
-        let downloads_dir = default_download_dir(&app_data);
+        let downloads_dir = if !settings.default_dir.is_empty() {
+            PathBuf::from(&settings.default_dir)
+        } else {
+            default_download_dir(&app_data)
+        };
         fs::create_dir_all(&downloads_dir).map_err(|e| e.to_string())?;
 
         let session_path = app_data.join("session.txt");
@@ -269,26 +289,31 @@ impl Aria2Process {
             fs::File::create(&session_path).map_err(|e| e.to_string())?;
         }
 
+        let mut args: Vec<String> = vec![
+            "--enable-rpc".into(),
+            "--rpc-listen-all=false".into(),
+            format!("--rpc-listen-port={port}"),
+            format!("--rpc-secret={secret}"),
+            format!("--dir={}", downloads_dir.display()),
+            format!("--input-file={}", session_path.display()),
+            format!("--save-session={}", session_path.display()),
+            "--save-session-interval=10".into(),
+            "--continue=true".into(),
+            "--auto-file-renaming=false".into(),
+            "--allow-overwrite=false".into(),
+            format!("--max-concurrent-downloads={}", settings.max_concurrent_downloads),
+            format!("--split={}", settings.default_split),
+            "--max-connection-per-server=16".into(),
+            "--summary-interval=1".into(),
+            "--console-log-level=warn".into(),
+            format!("--stop-with-process={}", std::process::id()),
+        ];
+        if settings.global_speed_limit > 0 {
+            args.push(format!("--max-overall-download-limit={}", settings.global_speed_limit));
+        }
+
         let mut cmd = Command::new(&binary);
-        cmd.args([
-            "--enable-rpc",
-            "--rpc-listen-all=false",
-            &format!("--rpc-listen-port={port}"),
-            &format!("--rpc-secret={secret}"),
-            &format!("--dir={}", downloads_dir.display()),
-            &format!("--input-file={}", session_path.display()),
-            &format!("--save-session={}", session_path.display()),
-            "--save-session-interval=10",
-            "--continue=true",
-            "--auto-file-renaming=false",
-            "--allow-overwrite=false",
-            "--max-concurrent-downloads=3",
-            "--split=16",
-            "--max-connection-per-server=16",
-            "--summary-interval=1",
-            "--console-log-level=warn",
-            &format!("--stop-with-process={}", std::process::id()),
-        ]);
+        cmd.args(args);
         cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
 
         let child = cmd
