@@ -1,46 +1,164 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import type { Snapshot } from "../types";
 
-interface Download {
-  gid: string;
+export interface AddDownloadOptions {
   uri: string;
-  status: string;
-  progress: number;
+  dir?: string;
+  out?: string;
+  split?: number;
 }
 
 interface Aria2ContextType {
-  downloads: Download[];
-  addDownload: (uri: string) => Promise<void>;
+  snapshot: Snapshot;
+  connected: boolean;
+  lastError: string | null;
+  addDownload: (opts: AddDownloadOptions) => Promise<string>;
+  pause: (gid: string) => Promise<void>;
+  resume: (gid: string) => Promise<void>;
+  remove: (gid: string) => Promise<void>;
+  del: (gid: string) => Promise<void>;
+  pauseAll: () => Promise<void>;
+  resumeAll: () => Promise<void>;
+  clearFinished: () => Promise<void>;
 }
 
 const Aria2Context = createContext<Aria2ContextType | undefined>(undefined);
 
-export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [downloads, setDownloads] = useState<Download[]>([]);
+const EMPTY: Snapshot = {
+  downloads: [],
+  global: {
+    download_speed: 0,
+    upload_speed: 0,
+    num_active: 0,
+    num_waiting: 0,
+    num_stopped: 0,
+  },
+  aria2_version: null,
+};
 
-  const fetchDownloads = async () => {
-    try {
-      const list: Download[] = await invoke("get_downloads");
-      setDownloads(list);
-    } catch (e) {
-      console.error("Failed to fetch downloads", e);
+function isSnapshot(payload: unknown): payload is Snapshot {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    "downloads" in payload &&
+    "global" in payload
+  );
+}
+
+export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [connected, setConnected] = useState(false);
+  const seenGids = useRef<Set<string>>(new Set());
+
+  const apply = useCallback((payload: unknown) => {
+    if (isSnapshot(payload)) {
+      setSnapshot(payload);
+      setConnected(true);
+      setLastError(null);
+      payload.downloads.forEach((d) => seenGids.current.add(d.gid));
+    } else {
+      setConnected(false);
     }
-  };
-  const addDownload = async (uri: string) => {
-    await invoke("add_download", { uri });
-    // immediately refresh list after adding
-    fetchDownloads();
-  };
-
-  // Poll downloads every 1-2 seconds
-  useEffect(() => {
-    fetchDownloads(); // initial fetch
-    const interval = setInterval(fetchDownloads, 2000); // poll every 2s
-    return () => clearInterval(interval); // cleanup
   }, []);
 
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+
+    invoke("get_snapshot")
+      .then((s) => {
+        if (!cancelled) apply(s);
+      })
+      .catch((e) => setLastError(String(e)));
+
+    listen<unknown>("downloads://update", (event) => {
+      apply(event.payload);
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    const interval = setInterval(() => {
+      invoke("get_snapshot")
+        .then((s) => {
+          if (!cancelled) apply(s);
+        })
+        .catch(() => {});
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      unlisten?.();
+      clearInterval(interval);
+    };
+  }, [apply]);
+
+  const addDownload = useCallback(async (opts: AddDownloadOptions) => {
+    const gid = await invoke<string>("add_download", {
+      uri: opts.uri,
+      dir: opts.dir ?? null,
+      out: opts.out ?? null,
+      split: opts.split ?? null,
+    });
+    return gid;
+  }, []);
+
+  const pause = useCallback(
+    (gid: string) => invoke("pause_download", { gid }) as Promise<void>,
+    [],
+  );
+  const resume = useCallback(
+    (gid: string) => invoke("resume_download", { gid }) as Promise<void>,
+    [],
+  );
+  const remove = useCallback(
+    (gid: string) => invoke("remove_download", { gid }) as Promise<void>,
+    [],
+  );
+  const del = useCallback(
+    (gid: string) => invoke("delete_download", { gid }) as Promise<void>,
+    [],
+  );
+  const pauseAll = useCallback(
+    () => invoke("pause_all") as Promise<void>,
+    [],
+  );
+  const resumeAll = useCallback(
+    () => invoke("resume_all") as Promise<void>,
+    [],
+  );
+  const clearFinished = useCallback(
+    () => invoke("clear_finished") as Promise<void>,
+    [],
+  );
+
   return (
-    <Aria2Context.Provider value={{ downloads, addDownload }}>
+    <Aria2Context.Provider
+      value={{
+        snapshot,
+        connected,
+        lastError,
+        addDownload,
+        pause,
+        resume,
+        remove,
+        del,
+        pauseAll,
+        resumeAll,
+        clearFinished,
+      }}
+    >
       {children}
     </Aria2Context.Provider>
   );
@@ -48,6 +166,6 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 export const useAria2 = () => {
   const ctx = useContext(Aria2Context);
-  if (!ctx) throw new Error("useAria2 must be inside Aria2Provider");
+  if (!ctx) throw new Error("useAria2 must be used inside Aria2Provider");
   return ctx;
 };

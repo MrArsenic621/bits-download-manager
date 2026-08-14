@@ -359,9 +359,10 @@ impl Aria2Process {
 
         // Candidate source locations, in order.
         let mut candidates: Vec<PathBuf> = Vec::new();
-        candidates.push(PathBuf::from("bin/windows/aria2c.exe")); // dev cwd = src-tauri
+        candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("bin").join("windows").join("aria2c.exe")); // dev / source build
         if let Ok(res) = app.path().resource_dir() {
-            candidates.push(res.join("bin").join("windows").join("aria2c.exe"));
+            candidates.push(res.join("bin").join("windows").join("aria2c.exe")); // bundled resource
             candidates.push(res.join("aria2c.exe"));
         }
         if let Ok(exe) = std::env::current_exe() {

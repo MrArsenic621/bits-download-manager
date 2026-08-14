@@ -202,6 +202,8 @@ fn delete_file(path: &str) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let handle = app.handle().clone();
             let (client, process) = Aria2Process::start(&handle).expect("failed to start aria2");

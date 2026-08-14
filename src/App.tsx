@@ -1,26 +1,50 @@
-import { useAria2 } from "./context/Aria2Provider";
 import { useState } from "react";
+import { useAria2 } from "./context/Aria2Provider";
+import type { Download, FilterKey } from "./types";
+import Sidebar from "./components/Sidebar";
+import Toolbar from "./components/Toolbar";
+import DownloadList from "./components/DownloadList";
+import NewDownloadModal from "./components/NewDownloadModal";
+import ConfirmDialog from "./components/ConfirmDialog";
 
 export default function App() {
-  const { downloads, addDownload } = useAria2();
-  const [url, setUrl] = useState("");
+  const { del } = useAria2();
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [query, setQuery] = useState("");
+  const [newOpen, setNewOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Download | null>(null);
 
   return (
-    <div className="App">
-      <h1>Downloads</h1>
-      <input
-        value={url}
-        onChange={e => setUrl(e.target.value)}
-        placeholder="Paste URL"
-      />
-      <button onClick={() => addDownload(url)}>Start Download</button>
-      <ul>
-        {downloads.map(d => (
-          <li key={d.gid}>
-            {d.uri} — {d.status} — {Math.round(d.progress)}%
-          </li>
-        ))}
-      </ul>
+    <div className="app">
+      <Sidebar filter={filter} onFilter={setFilter} />
+
+      <main className="main">
+        <Toolbar
+          query={query}
+          onQuery={setQuery}
+          onNew={() => setNewOpen(true)}
+        />
+        <div className="content">
+          <DownloadList
+            filter={filter}
+            query={query}
+            onDelete={setPendingDelete}
+          />
+        </div>
+      </main>
+
+      {newOpen && <NewDownloadModal onClose={() => setNewOpen(false)} />}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          download={pendingDelete}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            void del(pendingDelete.gid);
+            setPendingDelete(null);
+          }}
+        />
+      )}
     </div>
   );
 }

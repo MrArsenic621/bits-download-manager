@@ -1,0 +1,77 @@
+import { useAria2 } from "../context/Aria2Provider";
+import { useMemo } from "react";
+import {
+  EraserIcon,
+  PauseIcon,
+  PlayIcon,
+  PlusIcon,
+  SearchIcon,
+} from "../lib/icons";
+
+interface Props {
+  query: string;
+  onQuery: (q: string) => void;
+  onNew: () => void;
+}
+
+export default function Toolbar({ query, onQuery, onNew }: Props) {
+  const { snapshot, pauseAll, resumeAll, clearFinished, connected } = useAria2();
+
+  const hasActive = useMemo(
+    () => snapshot.downloads.some((d) => d.status === "active"),
+    [snapshot.downloads],
+  );
+  const hasFinished = useMemo(
+    () =>
+      snapshot.downloads.some(
+        (d) => d.status === "complete" || d.status === "error",
+      ),
+    [snapshot.downloads],
+  );
+
+  return (
+    <header className="toolbar">
+      <button className="btn btn-primary" onClick={onNew}>
+        <PlusIcon width={16} height={16} />
+        New download
+      </button>
+
+      <div className="search">
+        <SearchIcon width={15} height={15} />
+        <input
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+          placeholder="Search downloads…"
+          spellCheck={false}
+        />
+      </div>
+
+      <div className="toolbar-actions">
+        <button
+          className="btn"
+          onClick={resumeAll}
+          disabled={!connected}
+          title="Resume all"
+        >
+          <PlayIcon width={15} height={15} />
+        </button>
+        <button
+          className="btn"
+          onClick={pauseAll}
+          disabled={!connected || !hasActive}
+          title="Pause all"
+        >
+          <PauseIcon width={15} height={15} />
+        </button>
+        <button
+          className="btn"
+          onClick={clearFinished}
+          disabled={!connected || !hasFinished}
+          title="Clear finished"
+        >
+          <EraserIcon width={15} height={15} />
+        </button>
+      </div>
+    </header>
+  );
+}
