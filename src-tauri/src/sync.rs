@@ -207,11 +207,64 @@ fn collect(client: &RpcClient, ctx: &SyncContext) -> Result<Snapshot, String> {
         downloads,
         global,
         aria2_version: None,
+        startup_error: None,
     })
 }
 
 fn gid_of(raw: &Value) -> &str {
     raw.get("gid").and_then(|v| v.as_str()).unwrap_or("")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_aria2_payload_to_download() {
+        let raw = serde_json::json!({
+            "gid": "abc123",
+            "status": "active",
+            "totalLength": "1048576",
+            "completedLength": "524288",
+            "downloadSpeed": "131072",
+            "uploadSpeed": "0",
+            "errorCode": "0",
+            "errorMessage": "",
+            "dir": "C:\\Users\\test\\Downloads",
+            "files": [{
+                "path": "C:\\Users\\test\\Downloads\\file.bin",
+                "uris": [{"uri": "https://example.com/file.bin"}]
+            }]
+        });
+
+        let d = value_to_download(&raw, 42);
+
+        assert_eq!(d.gid, "abc123");
+        assert_eq!(d.status, "active");
+        assert_eq!(d.filename, "file.bin");
+        assert_eq!(d.uri, "https://example.com/file.bin");
+        assert_eq!(d.total_length, 1048576);
+        assert_eq!(d.completed_length, 524288);
+        assert_eq!(d.download_speed, 131072);
+        assert!((d.progress - 50.0).abs() < 0.001);
+        assert_eq!(d.eta_secs, Some(4));
+        assert_eq!(d.created_at, 42);
+        assert_eq!(d.file_path(), "C:\\Users\\test\\Downloads\\file.bin");
+    }
+
+    #[test]
+    fn falls_back_to_uri_for_filename() {
+        let raw = serde_json::json!({
+            "gid": "x",
+            "status": "error",
+            "files": [{ "path": "", "uris": [{"uri": "https://example.com/dir/archive.zip?v=1"}] }],
+            "errorMessage": "Connection reset"
+        });
+        let d = value_to_download(&raw, 0);
+        assert_eq!(d.filename, "archive.zip");
+        assert_eq!(d.error_message.as_deref(), Some("Connection reset"));
+        assert_eq!(d.status, "error");
+    }
 }
 
 /// Spawn the background poller that keeps the shared snapshot fresh and

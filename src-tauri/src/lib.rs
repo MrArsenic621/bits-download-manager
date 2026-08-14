@@ -13,9 +13,17 @@ use tauri::Manager;
 /* ================= App State ================= */
 
 struct AppState {
-    client: Arc<RpcClient>,
+    client: Option<Arc<RpcClient>>,
     process: Mutex<Option<Aria2Process>>,
     sync: Arc<SyncContext>,
+}
+
+impl AppState {
+    fn client(&self) -> Result<Arc<RpcClient>, String> {
+        self.client
+            .clone()
+            .ok_or_else(|| "aria2 engine is not running".into())
+    }
 }
 
 /* ================= Commands ================= */
@@ -38,7 +46,7 @@ async fn add_download(
         return Err("URL is empty".into());
     }
 
-    let client = state.client.clone();
+    let client = state.client()?;
     let sync = state.sync.clone();
 
     tauri::async_runtime::spawn_blocking(move || {
@@ -75,7 +83,7 @@ async fn add_download(
 
 #[tauri::command]
 async fn pause_download(gid: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let client = state.client.clone();
+    let client = state.client()?;
     tauri::async_runtime::spawn_blocking(move || client.pause(&gid))
         .await
         .map_err(|e| e.to_string())?
@@ -83,7 +91,7 @@ async fn pause_download(gid: String, state: tauri::State<'_, AppState>) -> Resul
 
 #[tauri::command]
 async fn resume_download(gid: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let client = state.client.clone();
+    let client = state.client()?;
     tauri::async_runtime::spawn_blocking(move || client.unpause(&gid))
         .await
         .map_err(|e| e.to_string())?
@@ -91,7 +99,7 @@ async fn resume_download(gid: String, state: tauri::State<'_, AppState>) -> Resu
 
 #[tauri::command]
 async fn pause_all(state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let client = state.client.clone();
+    let client = state.client()?;
     tauri::async_runtime::spawn_blocking(move || client.pause_all())
         .await
         .map_err(|e| e.to_string())?
@@ -99,7 +107,7 @@ async fn pause_all(state: tauri::State<'_, AppState>) -> Result<(), String> {
 
 #[tauri::command]
 async fn resume_all(state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let client = state.client.clone();
+    let client = state.client()?;
     tauri::async_runtime::spawn_blocking(move || client.unpause_all())
         .await
         .map_err(|e| e.to_string())?
@@ -108,7 +116,7 @@ async fn resume_all(state: tauri::State<'_, AppState>) -> Result<(), String> {
 /// Remove from the queue and drop it from the UI/history (files are kept).
 #[tauri::command]
 async fn remove_download(gid: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let client = state.client.clone();
+    let client = state.client()?;
     let sync = state.sync.clone();
     tauri::async_runtime::spawn_blocking(move || {
         // remove() only works on active/waiting downloads; ignore "not found".
@@ -130,7 +138,7 @@ async fn remove_download(gid: String, state: tauri::State<'_, AppState>) -> Resu
 /// Remove from queue and delete the file(s) from disk.
 #[tauri::command]
 async fn delete_download(gid: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let client = state.client.clone();
+    let client = state.client()?;
     let sync = state.sync.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let target = lookup_download(&sync, &gid);
@@ -157,7 +165,7 @@ async fn delete_download(gid: String, state: tauri::State<'_, AppState>) -> Resu
 
 #[tauri::command]
 async fn clear_finished(state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let client = state.client.clone();
+    let client = state.client()?;
     let sync = state.sync.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let mut history = sync.history.lock().unwrap();
@@ -206,7 +214,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let handle = app.handle().clone();
-            let (client, process) = Aria2Process::start(&handle).expect("failed to start aria2");
+
+            let (client, process, startup_error) = match Aria2Process::start(&handle) {
+                Ok((client, process)) => (Some(client), Some(process), None),
+                Err(e) => {
+                    eprintln!("failed to start aria2: {e}");
+                    (None, None, Some(e))
+                }
+            };
 
             let app_data = handle
                 .path()
@@ -222,11 +237,18 @@ pub fn run() {
                 last_persisted: Arc::new(Mutex::new(String::new())),
             });
 
-            sync::run_sync(handle.clone(), client.clone(), sync.clone());
+            {
+                let mut snap = sync.snapshot.lock().unwrap();
+                snap.startup_error = startup_error;
+            }
+
+            if let Some(client) = client.as_ref() {
+                sync::run_sync(handle.clone(), client.clone(), sync.clone());
+            }
 
             app.manage(AppState {
                 client,
-                process: Mutex::new(Some(process)),
+                process: Mutex::new(process),
                 sync,
             });
 
@@ -248,9 +270,10 @@ pub fn run() {
         .run(|app_handle, event| {
             if let tauri::RunEvent::ExitRequested { .. } = event {
                 if let Some(state) = app_handle.try_state::<AppState>() {
-                    let client = state.client.clone();
                     if let Some(process) = state.process.lock().unwrap().take() {
-                        process.stop(&client);
+                        if let Some(client) = state.client.as_ref() {
+                            process.stop(client);
+                        }
                     }
                 }
             }

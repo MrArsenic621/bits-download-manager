@@ -34,6 +34,7 @@ export interface Snapshot {
   downloads: Download[];
   global: GlobalStat;
   aria2_version: string | null;
+  startup_error: string | null;
 }
 
 export type FilterKey =

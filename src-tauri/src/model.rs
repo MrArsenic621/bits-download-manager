@@ -56,6 +56,8 @@ pub struct Snapshot {
     pub downloads: Vec<Download>,
     pub global: GlobalStat,
     pub aria2_version: Option<String>,
+    /// Set when the aria2 engine failed to start; cleared once it reports.
+    pub startup_error: Option<String>,
 }
 
 impl Default for Snapshot {
@@ -64,6 +66,7 @@ impl Default for Snapshot {
             downloads: Vec::new(),
             global: GlobalStat::default(),
             aria2_version: None,
+            startup_error: None,
         }
     }
 }

@@ -43,6 +43,7 @@ const EMPTY: Snapshot = {
     num_stopped: 0,
   },
   aria2_version: null,
+  startup_error: null,
 };
 
 function isSnapshot(payload: unknown): payload is Snapshot {
@@ -65,8 +66,8 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
   const apply = useCallback((payload: unknown) => {
     if (isSnapshot(payload)) {
       setSnapshot(payload);
-      setConnected(true);
-      setLastError(null);
+      setConnected(payload.startup_error == null);
+      setLastError(payload.startup_error);
       payload.downloads.forEach((d) => seenGids.current.add(d.gid));
     } else {
       setConnected(false);

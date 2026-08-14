@@ -22,11 +22,7 @@ const STATUS_LABEL: Record<string, string> = {
   removed: "Removed",
 };
 
-const FALLBACK_OPTIONS: Partial<AddDownloadOptions> = {
-  dir: undefined,
-  out: undefined,
-  split: 16,
-};
+const FALLBACK_OPTIONS: Partial<AddDownloadOptions> = { split: 16 };
 
 interface Props {
   download: Download;
@@ -55,7 +51,13 @@ export default function DownloadItem({ download: d, onDelete }: Props) {
   };
 
   const retry = () => {
-    void addDownload({ uri: d.uri, ...FALLBACK_OPTIONS });
+    void remove(d.gid);
+    void addDownload({
+      uri: d.uri,
+      dir: d.dir || undefined,
+      out: d.filename || undefined,
+      ...FALLBACK_OPTIONS,
+    });
   };
 
   const primaryAction = () => {

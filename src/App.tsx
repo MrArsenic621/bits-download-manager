@@ -8,7 +8,7 @@ import NewDownloadModal from "./components/NewDownloadModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 
 export default function App() {
-  const { del } = useAria2();
+  const { del, snapshot } = useAria2();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
   const [newOpen, setNewOpen] = useState(false);
@@ -19,6 +19,11 @@ export default function App() {
       <Sidebar filter={filter} onFilter={setFilter} />
 
       <main className="main">
+        {snapshot.startup_error && (
+          <div className="error-banner">
+            Download engine failed to start: {snapshot.startup_error}
+          </div>
+        )}
         <Toolbar
           query={query}
           onQuery={setQuery}
