@@ -69,6 +69,18 @@ Build a production installer:
 bun run tauri build
 ```
 
+## Release builds (GitHub Actions)
+
+A workflow (`.github/workflows/build.yml`) builds the app on `windows-latest`
+whenever a `v*.*.*` tag is pushed (also triggerable manually from the Actions
+tab). It produces both installers and attaches them to the tag's GitHub Release:
+
+- `src-tauri/target/release/bundle/nsis/*-setup.exe`
+- `src-tauri/target/release/bundle/msi/*.msi`
+
+The bundled `aria2c.exe` is shipped as a Tauri resource in the installers and
+copied to the app data dir on first run.
+
 ## How downloads work
 
 - Downloads default to your system `Downloads` folder (per-download override
