@@ -93,14 +93,14 @@ export default function Toolbar({
 
   return (
     <header className="toolbar">
-      <button className="btn btn-primary" onClick={onNew}>
+      <button className="btn btn-primary" onClick={onNew} title="New download (Ctrl+N)">
         <PlusIcon width={16} height={16} />
-        New download
+        <span className="btn-text">New download</span>
       </button>
 
       <button className="btn" onClick={addTorrent} disabled={!connected} title="Add .torrent file">
         <TorrentIcon width={15} height={15} />
-        Torrent
+        <span className="btn-text">Torrent</span>
       </button>
 
       <div className="search">
@@ -150,7 +150,7 @@ export default function Toolbar({
           disabled={!connected || !hasFailed}
           title="Retry failed downloads"
         >
-          Retry
+          <span className="btn-text">Retry</span>
         </button>
         <button
           className="btn"

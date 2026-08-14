@@ -164,16 +164,16 @@ export default function App() {
               </span>
               <div className="bulk-actions">
                 <button className="btn btn-sm" onClick={() => bulk("resume")} title="Resume selected">
-                  <PlayIcon width={14} height={14} /> Resume
+                  <PlayIcon width={14} height={14} /> <span className="btn-text">Resume</span>
                 </button>
                 <button className="btn btn-sm" onClick={() => bulk("pause")} title="Pause selected">
-                  <PauseIcon width={14} height={14} /> Pause
+                  <PauseIcon width={14} height={14} /> <span className="btn-text">Pause</span>
                 </button>
                 <button className="btn btn-sm" onClick={() => bulk("remove")} title="Remove selected from list">
-                  Remove
+                  <span className="btn-text">Remove</span>
                 </button>
                 <button className="btn btn-sm btn-danger" onClick={bulkDelete} title="Delete selected files">
-                  <TrashIcon width={14} height={14} /> Delete
+                  <TrashIcon width={14} height={14} /> <span className="btn-text">Delete</span>
                 </button>
                 <button className="icon-btn" onClick={() => setSelected(new Set())} title="Clear selection">
                   <CloseIcon width={15} height={15} />
