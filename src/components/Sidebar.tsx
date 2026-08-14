@@ -1,7 +1,7 @@
 import { useAria2 } from "../context/Aria2Provider";
 import type { Download, FilterKey } from "../types";
 import { formatSpeed } from "../lib/format";
-import { ArrowDownIcon, ArrowUpIcon, DownloadIcon } from "../lib/icons";
+import { ArrowDownIcon, ArrowUpIcon } from "../lib/icons";
 
 const ITEMS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All downloads" },
@@ -29,9 +29,7 @@ export default function Sidebar({ filter, onFilter }: Props) {
   return (
     <aside className="sidebar">
       <div className="brand">
-        <div className="brand-icon">
-          <DownloadIcon width={20} height={20} />
-        </div>
+        <div className="brand-icon brand-icon-logo">01</div>
         <div className="brand-text">
           <span className="brand-name">Bits</span>
           <span className="brand-sub">Download Manager</span>

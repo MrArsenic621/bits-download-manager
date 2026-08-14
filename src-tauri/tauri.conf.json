@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "bits-download-manager",
+        "title": "Bits Download Manager",
         "width": 960,
         "height": 640,
         "minWidth": 640,
