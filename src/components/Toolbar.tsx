@@ -3,6 +3,7 @@ import { useToast } from "./Toasts";
 import { useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import type { SortKey } from "../types";
 import {
   EraserIcon,
   GearIcon,
@@ -18,10 +19,28 @@ interface Props {
   onQuery: (q: string) => void;
   onNew: () => void;
   onSettings: () => void;
+  sort: SortKey;
+  onSort: (s: SortKey) => void;
 }
 
-export default function Toolbar({ query, onQuery, onNew, onSettings }: Props) {
-  const { snapshot, pauseAll, resumeAll, clearFinished, connected } = useAria2();
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "newest", label: "Newest" },
+  { key: "name", label: "Name" },
+  { key: "size", label: "Size" },
+  { key: "speed", label: "Speed" },
+  { key: "progress", label: "Progress" },
+];
+
+export default function Toolbar({
+  query,
+  onQuery,
+  onNew,
+  onSettings,
+  sort,
+  onSort,
+}: Props) {
+  const { snapshot, pauseAll, resumeAll, clearFinished, connected, remove, addDownload } =
+    useAria2();
   const { push } = useToast();
 
   const addTorrent = async () => {
@@ -50,6 +69,27 @@ export default function Toolbar({ query, onQuery, onNew, onSettings }: Props) {
       ),
     [snapshot.downloads],
   );
+  const hasFailed = useMemo(
+    () => snapshot.downloads.some((d) => d.status === "error"),
+    [snapshot.downloads],
+  );
+
+  const retryFailed = () => {
+    const failed = snapshot.downloads.filter((d) => d.status === "error");
+    let ok = 0;
+    for (const d of failed) {
+      void remove(d.gid);
+      void addDownload({
+        uri: d.uri,
+        dir: d.dir || undefined,
+        out: d.filename || undefined,
+        split: 16,
+      })
+        .then(() => ok++)
+        .catch(() => {});
+    }
+    push(`Retrying ${failed.length} failed download(s)`, "info");
+  };
 
   return (
     <header className="toolbar">
@@ -73,6 +113,19 @@ export default function Toolbar({ query, onQuery, onNew, onSettings }: Props) {
         />
       </div>
 
+      <select
+        className="sort-select"
+        value={sort}
+        onChange={(e) => onSort(e.target.value as SortKey)}
+        title="Sort by"
+      >
+        {SORT_OPTIONS.map((o) => (
+          <option key={o.key} value={o.key}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+
       <div className="toolbar-actions">
         <button
           className="btn"
@@ -89,6 +142,14 @@ export default function Toolbar({ query, onQuery, onNew, onSettings }: Props) {
           title="Pause all"
         >
           <PauseIcon width={15} height={15} />
+        </button>
+        <button
+          className="btn"
+          onClick={retryFailed}
+          disabled={!connected || !hasFailed}
+          title="Retry failed downloads"
+        >
+          Retry
         </button>
         <button
           className="btn"

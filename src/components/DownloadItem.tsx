@@ -35,10 +35,17 @@ const SPEED_LIMITS: { label: string; value: number }[] = [
 
 interface Props {
   download: Download;
+  selected: boolean;
+  onToggleSelect: () => void;
   onDelete: (d: Download) => void;
 }
 
-export default function DownloadItem({ download: d, onDelete }: Props) {
+export default function DownloadItem({
+  download: d,
+  selected,
+  onToggleSelect,
+  onDelete,
+}: Props) {
   const { pause, resume, remove, addDownload, setSpeedLimit } = useAria2();
 
   const statusLabel = STATUS_LABEL[d.status] ?? d.status;
@@ -159,7 +166,17 @@ export default function DownloadItem({ download: d, onDelete }: Props) {
   ) : null;
 
   return (
-    <article className={`download-item status-${d.status}`}>
+    <article
+      className={`download-item status-${d.status} ${selected ? "selected" : ""}`}
+    >
+      <label className="item-check" title="Select">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </label>
       <div className="item-icon">{statusIcon()}</div>
 
       <div className="item-main">

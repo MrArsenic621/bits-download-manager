@@ -45,6 +45,8 @@ export type FilterKey =
   | "complete"
   | "error";
 
+export type SortKey = "newest" | "name" | "size" | "speed" | "progress";
+
 export interface Settings {
   default_dir: string;
   default_split: number;
