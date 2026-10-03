@@ -20,6 +20,11 @@ export interface AddDownloadOptions {
   dir?: string;
   out?: string;
   split?: number;
+  referer?: string;
+  userAgent?: string;
+  cookie?: string;
+  authUser?: string;
+  authPass?: string;
 }
 
 interface Aria2ContextType {
@@ -158,6 +163,11 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
       dir: opts.dir ?? null,
       out: opts.out ?? null,
       split: opts.split ?? null,
+      referer: opts.referer ?? null,
+      userAgent: opts.userAgent ?? null,
+      cookie: opts.cookie ?? null,
+      authUser: opts.authUser ?? null,
+      authPass: opts.authPass ?? null,
     });
     return gid;
   }, []);

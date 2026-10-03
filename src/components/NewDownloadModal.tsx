@@ -14,6 +14,12 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
   const [dir, setDir] = useState("");
   const [out, setOut] = useState("");
   const [split, setSplit] = useState(16);
+  const [referer, setReferer] = useState("");
+  const [userAgent, setUserAgent] = useState("");
+  const [cookie, setCookie] = useState("");
+  const [authUser, setAuthUser] = useState("");
+  const [authPass, setAuthPass] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +47,11 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
           dir: dir.trim() || undefined,
           out: lines.length === 1 ? (out.trim() || undefined) : undefined,
           split,
+          referer: referer.trim() || undefined,
+          userAgent: userAgent.trim() || undefined,
+          cookie: cookie.trim() || undefined,
+          authUser: authUser.trim() || undefined,
+          authPass: authPass.trim() || undefined,
         });
       }
       onClose();
@@ -120,6 +131,72 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
               />
             </label>
           </div>
+
+          <div className="advanced-toggle-row">
+            <button
+              type="button"
+              className="advanced-toggle-btn"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+            >
+              {showAdvanced ? "▾ Hide advanced options" : "▸ Advanced options (Headers & Auth)"}
+            </button>
+          </div>
+
+          {showAdvanced && (
+            <div className="advanced-fields">
+              <label className="field">
+                <span className="field-label">Referer URL</span>
+                <input
+                  value={referer}
+                  onChange={(e) => setReferer(e.target.value)}
+                  placeholder="https://original-site.com/page"
+                  spellCheck={false}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">User-Agent</span>
+                <input
+                  value={userAgent}
+                  onChange={(e) => setUserAgent(e.target.value)}
+                  placeholder="Custom browser User-Agent header"
+                  spellCheck={false}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Cookie Header</span>
+                <input
+                  value={cookie}
+                  onChange={(e) => setCookie(e.target.value)}
+                  placeholder="session_id=...; token=..."
+                  spellCheck={false}
+                />
+              </label>
+
+              <div className="field-row">
+                <label className="field grow">
+                  <span className="field-label">HTTP Username</span>
+                  <input
+                    value={authUser}
+                    onChange={(e) => setAuthUser(e.target.value)}
+                    placeholder="Optional Basic Auth user"
+                    spellCheck={false}
+                  />
+                </label>
+                <label className="field grow">
+                  <span className="field-label">HTTP Password</span>
+                  <input
+                    type="password"
+                    value={authPass}
+                    onChange={(e) => setAuthPass(e.target.value)}
+                    placeholder="Optional Basic Auth password"
+                    spellCheck={false}
+                  />
+                </label>
+              </div>
+            </div>
+          )}
 
           {error && <div className="form-error">{error}</div>}
         </div>

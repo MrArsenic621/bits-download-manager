@@ -44,6 +44,11 @@ async fn add_download(
     dir: Option<String>,
     out: Option<String>,
     split: Option<u32>,
+    referer: Option<String>,
+    user_agent: Option<String>,
+    cookie: Option<String>,
+    auth_user: Option<String>,
+    auth_pass: Option<String>,
 ) -> Result<String, String> {
     let uri = uri.trim().to_string();
     if uri.is_empty() {
@@ -97,6 +102,25 @@ async fn add_download(
             Value::String(split.to_string()),
         );
         options.insert("continue".into(), Value::String("true".into()));
+
+        if let Some(r) = referer.filter(|s| !s.trim().is_empty()) {
+            options.insert("referer".into(), Value::String(r.trim().to_string()));
+        }
+        if let Some(ua) = user_agent.filter(|s| !s.trim().is_empty()) {
+            options.insert("user-agent".into(), Value::String(ua.trim().to_string()));
+        }
+        if let Some(c) = cookie.filter(|s| !s.trim().is_empty()) {
+            options.insert(
+                "header".into(),
+                Value::Array(vec![Value::String(format!("Cookie: {}", c.trim()))]),
+            );
+        }
+        if let Some(u) = auth_user.filter(|s| !s.trim().is_empty()) {
+            options.insert("http-user".into(), Value::String(u.trim().to_string()));
+        }
+        if let Some(p) = auth_pass.filter(|s| !s.trim().is_empty()) {
+            options.insert("http-passwd".into(), Value::String(p.trim().to_string()));
+        }
 
         let gid = client.add_uri(&[uri], Some(Value::Object(options)))?;
         sync.created

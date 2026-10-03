@@ -13,6 +13,7 @@
 ## Features
 
 - **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Advanced HTTP Headers & Auth** — Custom Referer, User-Agent, Cookie headers, and HTTP Basic/Bearer authentication support for protected URLs.
 - **Checksum & Hash Integrity Checker** — Built-in SHA-256, SHA-1, and MD5 calculator with one-click copy and instant hash match/mismatch verification.
 - **Smart Auto-Categorization** — Organizes downloads into subfolders (`Videos/`, `Documents/`, `Audio/`, `Archives/`, `Programs/`) by file extension with color-coded badges.
 - **Live Bandwidth Speed Graph** — Real-time SVG throughput sparkline chart with sliding 30-second window and peak speed detection.
