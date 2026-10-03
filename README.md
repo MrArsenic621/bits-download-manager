@@ -1,99 +1,106 @@
 # Bits Download Manager
 
-A fast, modern download manager for Windows built with [Tauri](https://tauri.app),
-React and [aria2](https://aria2.github.io/) as the download engine.
+[![Tauri](https://img.shields.io/badge/Tauri-v2-24C8D8?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Rust](https://img.shields.io/badge/Rust-2021-DEA584?style=flat-square&logo=rust&logoColor=black)](https://www.rust-lang.org/)
+[![aria2](https://img.shields.io/badge/Engine-aria2-brightgreen?style=flat-square)](https://aria2.github.io/)
 
-Multi-connection downloads, pause/resume, session persistence and a clean
-dark/light UI — all in one lightweight desktop app.
+**Bits Download Manager** is a fast, lightweight Windows desktop download manager built with Tauri v2, React 19, TypeScript, and an embedded [aria2](https://aria2.github.io/) daemon.
+
+---
 
 ## Features
 
-- **Multi-connection downloads** — splits downloads into up to 64 parallel
-  connections via aria2 for maximum speed.
-- **Pause / resume / retry** — pause and resume individual downloads or all at
-  once; retry failed downloads with one click.
-- **Real-time progress** — live speed, ETA, size and progress bars pushed to the
-  UI via Tauri events (1s updates).
-- **Session persistence** — active and paused downloads survive app restarts
-  (aria2 session file), and completed/failed history is stored in
-  `history.json`.
-- **Download controls** — remove from list (keep files) or delete file + control
-  file from disk, with confirmation.
-- **Search & filters** — filter by status (all/active/waiting/paused/completed/
-  failed) and search by name or URL.
-- **Custom destination** — pick a folder with the native dialog, set a filename,
-  and tune the number of connections per download.
-- **Dark/light theme** — adapts to your system preference.
+- **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Smart Clipboard Link Watcher** — Detects copied URLs and magnet links automatically with single or multi-link batch import.
+- **Batch Downloading** — Paste multiple URLs separated by newlines to queue downloads at once.
+- **BitTorrent & Magnet Links** — Native support for downloading via `.torrent` files and `magnet:?` URIs.
+- **Speed & Bandwidth Controls** — Configure global download speed caps or throttle speed per individual download.
+- **Bulk Queue Operations** — Multi-select items to batch resume, pause, remove, or delete files from disk.
+- **Pause / Resume / Retry** — Resume interrupted downloads seamlessly; retry failed downloads with one click.
+- **Session Persistence & History** — Active queue state persists across app launches via aria2 session files; full download history is stored in local storage.
+- **Keyboard Shortcuts**:
+  - `Ctrl + N`: Open new download dialog
+  - `Ctrl + F`: Quick search / filter downloads
+  - `Esc`: Close open modal / clear selection
+- **Console-Free Execution** — Zero terminal flash or background console popups on Windows.
+- **Dark / Light Theme** — Clean modern UI that follows system preferences.
+
+---
 
 ## Architecture
 
 ```
-src/                         React + TypeScript frontend (Vite)
-  context/Aria2Provider.tsx  subscribes to downloads://update events, exposes actions
-  components/                Sidebar, Toolbar, DownloadList, modals
-  lib/                       formatting helpers + SVG icon set
-src-tauri/                   Rust backend (Tauri)
-  src/aria2.rs               JSON-RPC client + aria2c process lifecycle
-  src/sync.rs                background poller → snapshot + event emission
-  src/history.rs             durable download history (history.json)
-  src/model.rs               Download / GlobalStat / Snapshot types
-  src/lib.rs                 Tauri commands + app entry
-  bin/windows/aria2c.exe     bundled aria2 binary (also shipped as a resource)
+bits-download-manager/
+├── src/                          # React 19 frontend (Vite + TypeScript)
+│   ├── components/               # UI components (DownloadList, Modals, Toolbar, Sidebar)
+│   ├── context/                  # Aria2Provider managing state and Tauri RPC events
+│   ├── lib/                      # SVG icons and format helpers
+│   └── App.tsx                   # Main layout, keyboard listeners & clipboard watcher
+├── src-tauri/                    # Rust backend (Tauri v2)
+│   ├── src/
+│   │   ├── aria2.rs              # aria2 daemon process management & JSON-RPC client
+│   │   ├── sync.rs               # Background poller pushing snapshots to frontend
+│   │   ├── history.rs            # History persistence (history.json)
+│   │   ├── settings.rs           # User settings load/save
+│   │   ├── model.rs              # Rust data structs & types
+│   │   ├── lib.rs                # Tauri command handlers & plugin setup
+│   │   └── main.rs               # App entrypoint (#![windows_subsystem = "windows"])
+│   └── bin/windows/aria2c.exe    # Bundled Windows aria2 binary
+├── AGENTS.md                     # AI Agent development & workflow guidelines
+└── package.json                  # Frontend dependencies and scripts
 ```
 
-The backend talks to `aria2c` over its JSON-RPC interface (`http://127.0.0.1:<port>/jsonrpc`)
-using a randomly generated secret token. A background loop polls aria2 once per
-second, merges active/waiting/stopped downloads with persisted history, and
-emits the resulting snapshot to the frontend.
+---
 
-## Development
+## Getting Started
 
-Prerequisites: [Rust](https://www.rust-lang.org/), [Bun](https://bun.sh/),
-and the [Tauri prerequisites](https://tauri.app/start/prerequisites/).
+### Prerequisites
 
-```bash
-bun install          # frontend dependencies
-bun run tauri dev    # start the app in dev mode (vite + cargo)
+- [Rust](https://www.rust-lang.org/) (latest stable)
+- [Bun](https://bun.sh/) (or Node.js / npm)
+- [Tauri v2 Prerequisites for Windows](https://tauri.app/start/prerequisites/)
+
+### Development
+
+1. Install frontend dependencies:
+   ```powershell
+   bun install
+   ```
+
+2. Start the app in development mode:
+   ```powershell
+   bun run tauri dev
+   ```
+
+### Running Backend Tests
+
+Backend tests spin up an embedded mock HTTP server and test aria2 RPC lifecycle methods:
+
+```powershell
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-Run backend tests:
+### Building Installers
 
-```bash
-cd src-tauri
-cargo test           # spins up a real aria2c + local HTTP server
-```
+Create production NSIS (`.exe`) and MSI (`.msi`) installers:
 
-Build a production installer:
-
-```bash
+```powershell
 bun run tauri build
 ```
 
-## Release builds (GitHub Actions)
+The output installers will be generated under `src-tauri/target/release/bundle/`.
 
-A workflow (`.github/workflows/build.yml`) builds the app on `windows-latest`
-whenever a `v*.*.*` tag is pushed (also triggerable manually from the Actions
-tab). It produces both installers and attaches them to the tag's GitHub Release:
+---
 
-- `src-tauri/target/release/bundle/nsis/*-setup.exe`
-- `src-tauri/target/release/bundle/msi/*.msi`
+## Release Builds
 
-The bundled `aria2c.exe` is shipped as a Tauri resource in the installers and
-copied to the app data dir on first run.
+Releases are automatically built with GitHub Actions on `windows-latest` when pushing a version tag (e.g. `v1.1.1`).
+The workflow attaches both NSIS setup and MSI installers to the GitHub Release.
 
-## How downloads work
+---
 
-- Downloads default to your system `Downloads` folder (per-download override
-  available in the "New download" dialog).
-- Partial downloads are resumable thanks to aria2 control files (`.aria2`) and
-  `--continue=true`.
-- When the app exits, the aria2 session is saved and the engine shuts down
-  gracefully; the next launch reuses the session.
-- Completed/failed downloads are kept in history so your list survives restarts.
+## License
 
-## Project layout notes
-
-- The bundled `aria2c.exe` lives in `src-tauri/bin/windows/` and is copied to the
-  app data dir at first run (also bundled as a Tauri resource for installers).
-- App data (session, history, RPC config, cached binary) lives in
-  `%APPDATA%\bits-download-manager`.
+MIT License.
