@@ -8,6 +8,7 @@ import DownloadList from "./components/DownloadList";
 import NewDownloadModal from "./components/NewDownloadModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 import SettingsModal from "./components/SettingsModal";
+import ChecksumModal from "./components/ChecksumModal";
 import { PauseIcon, PlayIcon, CloseIcon, TrashIcon } from "./lib/icons";
 
 const URL_GLOBAL_RE =
@@ -30,6 +31,7 @@ export default function App() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [newOpen, setNewOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [checksumTarget, setChecksumTarget] = useState<Download | null>(null);
   const [clipboardUrls, setClipboardUrls] = useState<string[] | null>(null);
   const lastDetected = useRef<string>("");
   const [confirm, setConfirm] = useState<{
@@ -192,6 +194,7 @@ export default function App() {
             selected={selected}
             onToggleSelect={toggleSelect}
             onDelete={askDelete}
+            onVerifyChecksum={setChecksumTarget}
           />
         </div>
       </main>
@@ -207,6 +210,18 @@ export default function App() {
       )}
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+
+      {checksumTarget && (
+        <ChecksumModal
+          filePath={
+            checksumTarget.dir
+              ? `${checksumTarget.dir.replace(/[\\/]+$/, "")}\\${checksumTarget.filename}`
+              : checksumTarget.filename
+          }
+          filename={checksumTarget.filename || "file"}
+          onClose={() => setChecksumTarget(null)}
+        />
+      )}
 
       {confirm && (
         <ConfirmDialog

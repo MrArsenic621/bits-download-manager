@@ -11,6 +11,7 @@ interface Props {
   selected: Set<string>;
   onToggleSelect: (gid: string) => void;
   onDelete: (d: Download) => void;
+  onVerifyChecksum?: (d: Download) => void;
 }
 
 export default function DownloadList({
@@ -20,6 +21,7 @@ export default function DownloadList({
   selected,
   onToggleSelect,
   onDelete,
+  onVerifyChecksum,
 }: Props) {
   const { snapshot } = useAria2();
 
@@ -91,6 +93,7 @@ export default function DownloadList({
           selected={selected.has(d.gid)}
           onToggleSelect={() => onToggleSelect(d.gid)}
           onDelete={onDelete}
+          onVerifyChecksum={onVerifyChecksum}
         />
       ))}
     </div>

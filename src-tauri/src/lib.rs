@@ -311,6 +311,54 @@ async fn set_speed_limit(
     .map_err(|e| e.to_string())?
 }
 
+/// Calculate SHA-256, SHA-1, or MD5 checksum for a file on disk.
+#[tauri::command]
+async fn calculate_checksum(path: String, algorithm: String) -> Result<String, String> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let algo_upper = algorithm.to_uppercase();
+        if algo_upper == "SHA-256" || algo_upper == "SHA256" {
+            let mut file = std::fs::File::open(&path)
+                .map_err(|e| format!("failed to open file {path}: {e}"))?;
+            let mut buffer = [0u8; 64 * 1024];
+            let mut hasher = Sha256::new();
+            loop {
+                let n = file.read(&mut buffer).map_err(|e| e.to_string())?;
+                if n == 0 {
+                    break;
+                }
+                hasher.update(&buffer[..n]);
+            }
+            Ok(hex::encode(hasher.finalize()))
+        } else if algo_upper == "SHA-1" || algo_upper == "SHA1" || algo_upper == "MD5" {
+            let cert_algo = if algo_upper.starts_with("SHA") { "SHA1" } else { "MD5" };
+            let mut cmd = std::process::Command::new("certutil");
+            cmd.args(["-hashfile", &path, cert_algo]);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd.creation_flags(0x08000000);
+            }
+            let output = cmd.output().map_err(|e| format!("failed to run hash utility: {e}"))?;
+            let text = String::from_utf8_lossy(&output.stdout);
+            let lines: Vec<&str> = text.lines().map(|l| l.trim()).filter(|l| !l.is_empty()).collect();
+            if lines.len() >= 2 {
+                let raw_hash = lines[1].replace(' ', "").to_lowercase();
+                if !raw_hash.is_empty() {
+                    return Ok(raw_hash);
+                }
+            }
+            Err("failed to parse hash output".into())
+        } else {
+            Err(format!("Unsupported algorithm: {algorithm}"))
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 fn lookup_download(sync: &SyncContext, gid: &str) -> Option<Download> {
     let snapshot = sync.snapshot.lock().unwrap();
     snapshot
@@ -404,6 +452,7 @@ pub fn run() {
             get_settings,
             update_settings,
             set_speed_limit,
+            calculate_checksum,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

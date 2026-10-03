@@ -11,6 +11,7 @@ import {
   FolderIcon,
   PauseIcon,
   PlayIcon,
+  ShieldCheckIcon,
   TrashIcon,
   XCircleIcon,
 } from "../lib/icons";
@@ -39,6 +40,7 @@ interface Props {
   selected: boolean;
   onToggleSelect: () => void;
   onDelete: (d: Download) => void;
+  onVerifyChecksum?: (d: Download) => void;
 }
 
 export default function DownloadItem({
@@ -46,6 +48,7 @@ export default function DownloadItem({
   selected,
   onToggleSelect,
   onDelete,
+  onVerifyChecksum,
 }: Props) {
   const { pause, resume, remove, addDownload, setSpeedLimit } = useAria2();
 
@@ -224,6 +227,15 @@ export default function DownloadItem({
 
       <div className="item-actions">
         {primaryAction()}
+        {isComplete && onVerifyChecksum && (
+          <button
+            className="icon-btn"
+            onClick={() => onVerifyChecksum(d)}
+            title="Verify Checksum (SHA-256 / SHA-1 / MD5)"
+          >
+            <ShieldCheckIcon width={16} height={16} />
+          </button>
+        )}
         {isComplete && (
           <button className="icon-btn" onClick={openFolder} title="Open folder">
             <FolderIcon width={16} height={16} />
