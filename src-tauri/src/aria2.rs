@@ -330,6 +330,12 @@ impl Aria2Process {
         let mut cmd = Command::new(&binary);
         cmd.args(args);
         cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
 
         let child = cmd
             .spawn()
@@ -519,22 +525,26 @@ mod tests {
         let session = dir.join("session.txt");
         std::fs::write(&session, "").unwrap();
 
-        let child = Command::new("bin/windows/aria2c.exe")
-            .args([
-                "--enable-rpc",
-                "--rpc-listen-all=false",
-                &format!("--rpc-listen-port={port}"),
-                &format!("--rpc-secret={secret}"),
-                &format!("--dir={}", dir.display()),
-                &format!("--input-file={}", session.display()),
-                &format!("--save-session={}", session.display()),
-                "--continue=true",
-                "--console-log-level=warn",
-            ])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .unwrap();
+        let mut cmd = Command::new("bin/windows/aria2c.exe");
+        cmd.args([
+            "--enable-rpc",
+            "--rpc-listen-all=false",
+            &format!("--rpc-listen-port={port}"),
+            &format!("--rpc-secret={secret}"),
+            &format!("--dir={}", dir.display()),
+            &format!("--input-file={}", session.display()),
+            &format!("--save-session={}", session.display()),
+            "--continue=true",
+            "--console-log-level=warn",
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+        let child = cmd.spawn().unwrap();
 
         (RpcClient::new(port, secret), child)
     }
