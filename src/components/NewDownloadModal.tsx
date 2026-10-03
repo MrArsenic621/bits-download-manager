@@ -22,11 +22,12 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
     if (typeof selected === "string") setDir(selected);
   };
 
+  const lines = uris
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
   const start = async () => {
-    const lines = uris
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
     if (lines.length === 0) {
       setError("Paste at least one URL.");
       return;
@@ -38,7 +39,7 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
         await addDownload({
           uri,
           dir: dir.trim() || undefined,
-          out: out.trim() || undefined,
+          out: lines.length === 1 ? (out.trim() || undefined) : undefined,
           split,
         });
       }
@@ -89,11 +90,18 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
 
           <div className="field-row">
             <label className="field grow">
-              <span className="field-label">Filename (optional)</span>
+              <span className="field-label">
+                Filename {lines.length > 1 ? "(disabled for batch)" : "(optional)"}
+              </span>
               <input
                 value={out}
                 onChange={(e) => setOut(e.target.value)}
-                placeholder="Auto-detected from URL"
+                placeholder={
+                  lines.length > 1
+                    ? "Auto-detected per URL"
+                    : "Auto-detected from URL"
+                }
+                disabled={lines.length > 1}
                 spellCheck={false}
               />
             </label>
@@ -123,10 +131,14 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
           <button
             className="btn btn-primary"
             onClick={start}
-            disabled={busy || uris.trim().length === 0}
+            disabled={busy || lines.length === 0}
           >
             <DownloadIcon width={15} height={15} />
-            {busy ? "Starting…" : "Start download"}
+            {busy
+              ? "Starting…"
+              : lines.length > 1
+                ? `Start downloads (${lines.length})`
+                : "Start download"}
           </button>
         </div>
       </div>

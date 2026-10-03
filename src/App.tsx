@@ -10,13 +10,16 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import SettingsModal from "./components/SettingsModal";
 import { PauseIcon, PlayIcon, CloseIcon, TrashIcon } from "./lib/icons";
 
-const URL_RE =
-  /(https?:\/\/[^\s<>"']+|magnet:\?[^\s<>"']+)/i;
+const URL_GLOBAL_RE =
+  /(https?:\/\/[^\s<>"']+|magnet:\?[^\s<>"']+)/gi;
 
-function extractUrl(text: string): string | null {
-  const m = text.match(URL_RE);
-  if (!m) return null;
-  return m[1].replace(/[.,;:!?]+$/, "");
+function extractUrls(text: string): string[] {
+  const matches = text.match(URL_GLOBAL_RE);
+  if (!matches) return [];
+  const cleaned = matches
+    .map((u) => u.replace(/[.,;:!?]+$/, ""))
+    .filter((u) => u.length > 0);
+  return Array.from(new Set(cleaned));
 }
 
 export default function App() {
@@ -27,7 +30,7 @@ export default function App() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [newOpen, setNewOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [clipboardUrl, setClipboardUrl] = useState<string | null>(null);
+  const [clipboardUrls, setClipboardUrls] = useState<string[] | null>(null);
   const lastDetected = useRef<string>("");
   const [confirm, setConfirm] = useState<{
     title: string;
@@ -75,13 +78,14 @@ export default function App() {
   useEffect(() => {
     if (!settings?.watch_clipboard) return;
     const tick = async () => {
-      if (!document.hasFocus() || clipboardUrl) return;
+      if (!document.hasFocus() || clipboardUrls) return;
       try {
         const text = await readText();
-        const url = extractUrl(text);
-        if (url && url !== lastDetected.current) {
-          lastDetected.current = url;
-          setClipboardUrl(url);
+        const urls = extractUrls(text);
+        const key = urls.join("\n");
+        if (urls.length > 0 && key !== lastDetected.current) {
+          lastDetected.current = key;
+          setClipboardUrls(urls);
         }
       } catch {
         // clipboard unreadable; ignore
@@ -89,7 +93,7 @@ export default function App() {
     };
     const id = setInterval(tick, 2000);
     return () => clearInterval(id);
-  }, [settings?.watch_clipboard, clipboardUrl]);
+  }, [settings?.watch_clipboard, clipboardUrls]);
 
   const toggleSelect = (gid: string) =>
     setSelected((prev) => {
@@ -194,10 +198,10 @@ export default function App() {
 
       {newOpen && (
         <NewDownloadModal
-          initialUri={clipboardUrl ?? undefined}
+          initialUri={clipboardUrls ? clipboardUrls.join("\n") : undefined}
           onClose={() => {
             setNewOpen(false);
-            setClipboardUrl(null);
+            setClipboardUrls(null);
           }}
         />
       )}
@@ -214,21 +218,27 @@ export default function App() {
         />
       )}
 
-      {clipboardUrl && !newOpen && (
+      {clipboardUrls && clipboardUrls.length > 0 && !newOpen && (
         <div className="clipboard-chip">
           <div className="chip-text">
-            <span className="chip-title">Link detected</span>
-            <span className="chip-url" title={clipboardUrl}>
-              {clipboardUrl}
+            <span className="chip-title">
+              {clipboardUrls.length === 1
+                ? "Link detected"
+                : `${clipboardUrls.length} links detected`}
+            </span>
+            <span className="chip-url" title={clipboardUrls.join("\n")}>
+              {clipboardUrls.length === 1
+                ? clipboardUrls[0]
+                : `${clipboardUrls[0]} (+${clipboardUrls.length - 1} more)`}
             </span>
           </div>
           <div className="chip-actions">
             <button className="btn btn-sm btn-primary" onClick={() => setNewOpen(true)}>
-              Add
+              {clipboardUrls.length === 1 ? "Add" : `Add (${clipboardUrls.length})`}
             </button>
             <button
               className="icon-btn"
-              onClick={() => setClipboardUrl(null)}
+              onClick={() => setClipboardUrls(null)}
               title="Dismiss"
             >
               <CloseIcon width={15} height={15} />
