@@ -1,4 +1,5 @@
 mod aria2;
+mod bridge;
 mod history;
 mod model;
 mod settings;
@@ -483,6 +484,14 @@ pub fn run() {
 
             if let Some(client) = client.as_ref() {
                 sync::run_sync(handle.clone(), client.clone(), sync.clone());
+                bridge::start_bridge_server(
+                    client.clone(),
+                    sync.clone(),
+                    app_data.clone(),
+                    settings.default_dir.clone(),
+                    settings.default_split,
+                    settings.auto_categorize,
+                );
             }
 
             app.manage(AppState {

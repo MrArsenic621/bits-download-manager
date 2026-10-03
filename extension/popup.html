@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bits Download Manager</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="header">
+    <div class="logo">01</div>
+    <div class="title-group">
+      <h1>Bits</h1>
+      <span class="sub">Download Manager</span>
+    </div>
+    <div id="status-dot" class="status-dot offline" title="Checking status..."></div>
+  </div>
+
+  <div class="content">
+    <label class="toggle-row">
+      <span class="toggle-label">
+        <strong>Auto-intercept downloads</strong>
+        <small>Catch browser downloads automatically</small>
+      </span>
+      <input type="checkbox" id="intercept-toggle" />
+    </label>
+
+    <div class="quick-add">
+      <input type="text" id="quick-url" placeholder="Paste URL to download..." />
+      <button id="add-btn" class="btn-primary">Download</button>
+    </div>
+
+    <div id="feedback" class="feedback"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

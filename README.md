@@ -13,6 +13,7 @@
 ## Features
 
 - **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Browser Extension Companion** — Chrome, Edge, and Firefox Manifest V3 companion extension for right-click download and automatic browser interception.
 - **System Tray & Background Mode** — Minimize to Windows system tray with quick action menu (Show/Hide, Pause/Resume All, Quit) and close-to-tray background persistence.
 - **Download Scheduler & Auto-Shutdown** — Automatically run queue during scheduled off-peak hours (e.g. 1 AM – 7 AM) and put PC to sleep / shutdown when complete.
 - **Advanced HTTP Headers & Auth** — Custom Referer, User-Agent, Cookie headers, and HTTP Basic/Bearer authentication support for protected URLs.
@@ -47,6 +48,7 @@ bits-download-manager/
 ├── src-tauri/                    # Rust backend (Tauri v2)
 │   ├── src/
 │   │   ├── aria2.rs              # aria2 daemon process management & JSON-RPC client
+│   │   ├── bridge.rs             # Local HTTP bridge server (127.0.0.1:6801) for browser extension
 │   │   ├── sync.rs               # Background poller pushing snapshots to frontend
 │   │   ├── history.rs            # History persistence (history.json)
 │   │   ├── settings.rs           # User settings load/save
@@ -54,6 +56,7 @@ bits-download-manager/
 │   │   ├── lib.rs                # Tauri command handlers & plugin setup
 │   │   └── main.rs               # App entrypoint (#![windows_subsystem = "windows"])
 │   └── bin/windows/aria2c.exe    # Bundled Windows aria2 binary
+├── extension/                    # Manifest V3 browser companion extension (Chrome / Edge / Firefox)
 ├── AGENTS.md                     # AI Agent development & workflow guidelines
 └── package.json                  # Frontend dependencies and scripts
 ```

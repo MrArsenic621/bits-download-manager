@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Bits Download Manager Companion",
+  "version": "1.0.0",
+  "description": "Download links and browser downloads with Bits Download Manager at maximum speed.",
+  "permissions": [
+    "downloads",
+    "contextMenus",
+    "storage",
+    "activeTab",
+    "cookies"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:6801/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Bits Download Manager"
+  }
+}
