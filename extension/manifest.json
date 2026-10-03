@@ -15,10 +15,17 @@
     "<all_urls>"
   ],
   "background": {
+    "scripts": ["background.js"],
     "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",
     "default_title": "Bits Download Manager"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "bits-download-manager@local",
+      "strict_min_version": "109.0"
+    }
   }
 }

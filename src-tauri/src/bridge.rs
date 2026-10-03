@@ -31,8 +31,13 @@ pub fn start_bridge_server(
     std::thread::spawn(move || {
         let listener = match TcpListener::bind("127.0.0.1:6801") {
             Ok(l) => l,
-            Err(_) => return, // Port already in use or bridge disabled
+            Err(e) => {
+                eprintln!("Failed to bind bridge server on 127.0.0.1:6801: {e}");
+                return;
+            }
         };
+
+        println!("Bridge server listening on http://127.0.0.1:6801");
 
         for stream in listener.incoming() {
             if let Ok(mut stream) = stream {
@@ -230,4 +235,47 @@ fn handle_client(
                     Content-Length: 0\r\n\
                     Connection: close\r\n\r\n";
     let _ = stream.write_all(response.as_bytes());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bridge_ping_response() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        std::thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let client = Arc::new(RpcClient::new(6800, "secret"));
+                let sync = Arc::new(SyncContext {
+                    snapshot: Arc::new(std::sync::Mutex::new(crate::model::Snapshot::default())),
+                    history: Arc::new(std::sync::Mutex::new(Default::default())),
+                    created: Arc::new(std::sync::Mutex::new(Default::default())),
+                    history_path: PathBuf::from("history.json"),
+                    last_persisted: Arc::new(std::sync::Mutex::new(String::new())),
+                });
+                handle_client(
+                    &mut stream,
+                    client,
+                    sync,
+                    PathBuf::from("."),
+                    String::new(),
+                    16,
+                    true,
+                );
+            }
+        });
+
+        let client = reqwest::blocking::Client::new();
+        let res = client
+            .get(format!("http://127.0.0.1:{port}/ping"))
+            .send()
+            .unwrap();
+        assert_eq!(res.status(), 200);
+        let val: Value = res.json().unwrap();
+        assert_eq!(val["status"], "ok");
+        assert_eq!(val["app"], "Bits Download Manager");
+    }
 }
