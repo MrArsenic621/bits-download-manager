@@ -493,7 +493,94 @@ pub fn run() {
                 settings_path,
             });
 
+            use tauri::menu::{Menu, MenuItem};
+            use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+
+            let show_i = MenuItem::with_id(app, "show", "Show / Hide Bits", true, None::<&str>)?;
+            let resume_i = MenuItem::with_id(app, "resume_all", "Resume All", true, None::<&str>)?;
+            let pause_i = MenuItem::with_id(app, "pause_all", "Pause All", true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", "Quit Bits", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &resume_i, &pause_i, &quit_i])?;
+
+            let mut builder = TrayIconBuilder::new()
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app: &tauri::AppHandle, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            if let Ok(visible) = window.is_visible() {
+                                if visible {
+                                    let _ = window.hide();
+                                } else {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                        }
+                    }
+                    "resume_all" => {
+                        if let Some(state) = app.try_state::<AppState>() {
+                            if let Ok(client) = state.client() {
+                                let _ = client.unpause_all();
+                            }
+                        }
+                    }
+                    "pause_all" => {
+                        if let Some(state) = app.try_state::<AppState>() {
+                            if let Ok(client) = state.client() {
+                                let _ = client.pause_all();
+                            }
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray: &tauri::tray::TrayIcon, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            if let Ok(visible) = window.is_visible() {
+                                if visible {
+                                    let _ = window.hide();
+                                } else {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                        }
+                    }
+                });
+
+            if let Some(icon) = app.default_window_icon() {
+                builder = builder.icon(icon.clone());
+            }
+
+            let _ = builder.build(app)?;
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let app = window.app_handle();
+                if let Some(state) = app.try_state::<AppState>() {
+                    let close_to_tray = state
+                        .settings
+                        .lock()
+                        .map(|s| s.close_to_tray)
+                        .unwrap_or(true);
+                    if close_to_tray {
+                        api.prevent_close();
+                        let _ = window.hide();
+                    }
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             get_snapshot,

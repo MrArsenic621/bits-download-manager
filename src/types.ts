@@ -59,4 +59,5 @@ export interface Settings {
   schedule_start_time: string;
   schedule_stop_time: string;
   shutdown_on_finish: boolean;
+  close_to_tray: boolean;
 }

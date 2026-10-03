@@ -67,6 +67,7 @@ pub struct Settings {
     pub schedule_start_time: String,
     pub schedule_stop_time: String,
     pub shutdown_on_finish: bool,
+    pub close_to_tray: bool,
 }
 
 impl Default for Settings {
@@ -83,6 +84,7 @@ impl Default for Settings {
             schedule_start_time: "01:00".into(),
             schedule_stop_time: "07:00".into(),
             shutdown_on_finish: false,
+            close_to_tray: true,
         }
     }
 }

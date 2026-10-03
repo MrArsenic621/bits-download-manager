@@ -35,6 +35,7 @@ export default function SettingsModal({ onClose }: Props) {
           schedule_start_time: "01:00",
           schedule_stop_time: "07:00",
           shutdown_on_finish: false,
+          close_to_tray: true,
         },
   );
   const [error, setError] = useState<string | null>(null);
@@ -200,6 +201,20 @@ export default function SettingsModal({ onClose }: Props) {
               type="checkbox"
               checked={form.shutdown_on_finish}
               onChange={(e) => set("shutdown_on_finish", e.target.checked)}
+            />
+          </label>
+
+          <label className="toggle-row">
+            <span>
+              <span className="toggle-title">Close to System Tray</span>
+              <span className="toggle-sub">
+                Keep downloading in the background when closing the window
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={form.close_to_tray}
+              onChange={(e) => set("close_to_tray", e.target.checked)}
             />
           </label>
 
