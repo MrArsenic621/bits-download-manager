@@ -55,4 +55,8 @@ export interface Settings {
   notify_on_complete: boolean;
   watch_clipboard: boolean;
   auto_categorize: boolean;
+  schedule_enabled: boolean;
+  schedule_start_time: string;
+  schedule_stop_time: string;
+  shutdown_on_finish: boolean;
 }

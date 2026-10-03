@@ -63,6 +63,10 @@ pub struct Settings {
     pub notify_on_complete: bool,
     pub watch_clipboard: bool,
     pub auto_categorize: bool,
+    pub schedule_enabled: bool,
+    pub schedule_start_time: String,
+    pub schedule_stop_time: String,
+    pub shutdown_on_finish: bool,
 }
 
 impl Default for Settings {
@@ -75,6 +79,10 @@ impl Default for Settings {
             notify_on_complete: true,
             watch_clipboard: true,
             auto_categorize: true,
+            schedule_enabled: false,
+            schedule_start_time: "01:00".into(),
+            schedule_stop_time: "07:00".into(),
+            shutdown_on_finish: false,
         }
     }
 }

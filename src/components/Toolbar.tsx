@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { SortKey } from "../types";
 import {
+  ClockIcon,
   EraserIcon,
   GearIcon,
   PauseIcon,
@@ -39,7 +40,7 @@ export default function Toolbar({
   sort,
   onSort,
 }: Props) {
-  const { snapshot, pauseAll, resumeAll, clearFinished, connected, remove, addDownload } =
+  const { snapshot, pauseAll, resumeAll, clearFinished, connected, remove, addDownload, settings } =
     useAria2();
   const { push } = useToast();
 
@@ -160,6 +161,16 @@ export default function Toolbar({
         >
           <EraserIcon width={15} height={15} />
         </button>
+        {settings?.schedule_enabled && (
+          <button
+            className="btn btn-schedule-active"
+            onClick={onSettings}
+            title={`Scheduler active: ${settings.schedule_start_time} - ${settings.schedule_stop_time}`}
+          >
+            <ClockIcon width={14} height={14} />
+            <span className="btn-text">Scheduled</span>
+          </button>
+        )}
         <button className="btn" onClick={onSettings} title="Settings">
           <GearIcon width={15} height={15} />
         </button>

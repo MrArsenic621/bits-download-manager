@@ -31,6 +31,10 @@ export default function SettingsModal({ onClose }: Props) {
           notify_on_complete: true,
           watch_clipboard: true,
           auto_categorize: true,
+          schedule_enabled: false,
+          schedule_start_time: "01:00",
+          schedule_stop_time: "07:00",
+          shutdown_on_finish: false,
         },
   );
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +151,55 @@ export default function SettingsModal({ onClose }: Props) {
               type="checkbox"
               checked={form.notify_on_complete}
               onChange={(e) => set("notify_on_complete", e.target.checked)}
+            />
+          </label>
+
+          <label className="toggle-row">
+            <span>
+              <span className="toggle-title">Download Scheduler</span>
+              <span className="toggle-sub">
+                Automatically download only during scheduled off-peak hours
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={form.schedule_enabled}
+              onChange={(e) => set("schedule_enabled", e.target.checked)}
+            />
+          </label>
+
+          {form.schedule_enabled && (
+            <div className="field-row schedule-time-row">
+              <label className="field grow">
+                <span className="field-label">Start time</span>
+                <input
+                  type="time"
+                  value={form.schedule_start_time}
+                  onChange={(e) => set("schedule_start_time", e.target.value)}
+                />
+              </label>
+              <label className="field grow">
+                <span className="field-label">Stop time</span>
+                <input
+                  type="time"
+                  value={form.schedule_stop_time}
+                  onChange={(e) => set("schedule_stop_time", e.target.value)}
+                />
+              </label>
+            </div>
+          )}
+
+          <label className="toggle-row">
+            <span>
+              <span className="toggle-title">Auto-shutdown PC on finish</span>
+              <span className="toggle-sub">
+                Put PC to sleep or shutdown when all active downloads complete
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={form.shutdown_on_finish}
+              onChange={(e) => set("shutdown_on_finish", e.target.checked)}
             />
           </label>
 

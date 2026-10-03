@@ -383,6 +383,39 @@ async fn calculate_checksum(path: String, algorithm: String) -> Result<String, S
     .map_err(|e| e.to_string())?
 }
 
+/// Trigger Windows shutdown, sleep, or hibernate.
+#[tauri::command]
+async fn shutdown_pc(action: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut cmd = match action.as_str() {
+            "sleep" => {
+                let mut c = std::process::Command::new("powershell");
+                c.args(["-Command", "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"]);
+                c
+            }
+            "hibernate" => {
+                let mut c = std::process::Command::new("shutdown");
+                c.args(["/h"]);
+                c
+            }
+            _ => {
+                let mut c = std::process::Command::new("shutdown");
+                c.args(["/s", "/t", "30"]);
+                c
+            }
+        };
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+        cmd.spawn().map_err(|e| format!("failed to trigger shutdown: {e}"))?;
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 fn lookup_download(sync: &SyncContext, gid: &str) -> Option<Download> {
     let snapshot = sync.snapshot.lock().unwrap();
     snapshot
@@ -477,6 +510,7 @@ pub fn run() {
             update_settings,
             set_speed_limit,
             calculate_checksum,
+            shutdown_pc,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

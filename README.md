@@ -13,6 +13,7 @@
 ## Features
 
 - **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Download Scheduler & Auto-Shutdown** — Automatically run queue during scheduled off-peak hours (e.g. 1 AM – 7 AM) and put PC to sleep / shutdown when complete.
 - **Advanced HTTP Headers & Auth** — Custom Referer, User-Agent, Cookie headers, and HTTP Basic/Bearer authentication support for protected URLs.
 - **Checksum & Hash Integrity Checker** — Built-in SHA-256, SHA-1, and MD5 calculator with one-click copy and instant hash match/mismatch verification.
 - **Smart Auto-Categorization** — Organizes downloads into subfolders (`Videos/`, `Documents/`, `Audio/`, `Archives/`, `Programs/`) by file extension with color-coded badges.

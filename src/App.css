@@ -823,6 +823,17 @@ body {
   animation: toast-in 0.15s ease;
 }
 
+.btn-schedule-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(79, 140, 255, 0.4);
+}
+
+.schedule-time-row {
+  animation: toast-in 0.15s ease;
+  margin-top: -4px;
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;
