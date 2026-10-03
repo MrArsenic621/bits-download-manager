@@ -18,9 +18,18 @@
     "scripts": ["background.js"],
     "service_worker": "background.js"
   },
+  "icons": {
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Bits Download Manager"
+    "default_title": "Bits Download Manager",
+    "default_icon": {
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    }
   },
   "browser_specific_settings": {
     "gecko": {

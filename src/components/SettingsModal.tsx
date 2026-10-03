@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { useAria2 } from "../context/Aria2Provider";
 import type { Settings } from "../types";
 import { CloseIcon, FolderIcon } from "../lib/icons";
@@ -18,8 +19,11 @@ interface Props {
   onClose: () => void;
 }
 
+type TabKey = "general" | "scheduler" | "extension";
+
 export default function SettingsModal({ onClose }: Props) {
   const { settings, updateSettings } = useAria2();
+  const [activeTab, setActiveTab] = useState<TabKey>("general");
   const [form, setForm] = useState<Settings>(() =>
     settings
       ? { ...settings }
@@ -49,6 +53,14 @@ export default function SettingsModal({ onClose }: Props) {
     if (typeof dir === "string") set("default_dir", dir);
   };
 
+  const openExtensionFolder = async () => {
+    try {
+      await openPath("extension");
+    } catch {
+      // fallback
+    }
+  };
+
   const save = async () => {
     setBusy(true);
     setError(null);
@@ -63,7 +75,7 @@ export default function SettingsModal({ onClose }: Props) {
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="modal modal-settings" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Settings</h2>
           <button className="icon-btn" onClick={onClose} title="Close">
@@ -71,166 +83,242 @@ export default function SettingsModal({ onClose }: Props) {
           </button>
         </div>
 
+        <div className="settings-tabs">
+          <button
+            className={`settings-tab ${activeTab === "general" ? "active" : ""}`}
+            onClick={() => setActiveTab("general")}
+          >
+            General
+          </button>
+          <button
+            className={`settings-tab ${activeTab === "scheduler" ? "active" : ""}`}
+            onClick={() => setActiveTab("scheduler")}
+          >
+            Scheduler & Power
+          </button>
+          <button
+            className={`settings-tab ${activeTab === "extension" ? "active" : ""}`}
+            onClick={() => setActiveTab("extension")}
+          >
+            Browser Extension
+          </button>
+        </div>
+
         <div className="modal-body">
-          <div className="field-row">
-            <label className="field grow">
-              <span className="field-label">Default download folder</span>
-              <input
-                value={form.default_dir}
-                onChange={(e) => set("default_dir", e.target.value)}
-                placeholder="System Downloads folder"
-                spellCheck={false}
-              />
-            </label>
-            <button className="btn browse-btn" onClick={browse} title="Browse">
-              <FolderIcon width={15} height={15} />
-            </button>
-          </div>
+          {activeTab === "general" && (
+            <>
+              <div className="field-row">
+                <label className="field grow">
+                  <span className="field-label">Default download folder</span>
+                  <input
+                    value={form.default_dir}
+                    onChange={(e) => set("default_dir", e.target.value)}
+                    placeholder="System Downloads folder"
+                    spellCheck={false}
+                  />
+                </label>
+                <button className="btn browse-btn" onClick={browse} title="Browse">
+                  <FolderIcon width={15} height={15} />
+                </button>
+              </div>
 
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Connections per download</span>
-              <input
-                type="number"
-                min={1}
-                max={64}
-                value={form.default_split}
-                onChange={(e) =>
-                  set("default_split", Math.min(64, Math.max(1, Number(e.target.value) || 16)))
-                }
-              />
-            </label>
-            <label className="field">
-              <span className="field-label">Max concurrent downloads</span>
-              <input
-                type="number"
-                min={1}
-                max={16}
-                value={form.max_concurrent_downloads}
-                onChange={(e) =>
-                  set("max_concurrent_downloads", Math.min(16, Math.max(1, Number(e.target.value) || 3)))
-                }
-              />
-            </label>
-          </div>
+              <div className="field-row">
+                <label className="field">
+                  <span className="field-label">Connections per download</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={64}
+                    value={form.default_split}
+                    onChange={(e) =>
+                      set(
+                        "default_split",
+                        Math.min(64, Math.max(1, Number(e.target.value) || 16)),
+                      )
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">Max concurrent downloads</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={16}
+                    value={form.max_concurrent_downloads}
+                    onChange={(e) =>
+                      set(
+                        "max_concurrent_downloads",
+                        Math.min(16, Math.max(1, Number(e.target.value) || 3)),
+                      )
+                    }
+                  />
+                </label>
+              </div>
 
-          <label className="field">
-            <span className="field-label">Global download speed limit</span>
-            <select
-              className="select"
-              value={form.global_speed_limit}
-              onChange={(e) => set("global_speed_limit", Number(e.target.value))}
-            >
-              {SPEED_LIMITS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              <label className="field">
+                <span className="field-label">Global download speed limit</span>
+                <select
+                  className="select"
+                  value={form.global_speed_limit}
+                  onChange={(e) =>
+                    set("global_speed_limit", Number(e.target.value))
+                  }
+                >
+                  {SPEED_LIMITS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <label className="toggle-row">
-            <span>
-              <span className="toggle-title">Auto-categorize downloads</span>
-              <span className="toggle-sub">
-                Organize downloads into subfolders (Videos, Documents, Music, Archives, Programs)
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={form.auto_categorize}
-              onChange={(e) => set("auto_categorize", e.target.checked)}
-            />
-          </label>
-
-          <label className="toggle-row">
-            <span>
-              <span className="toggle-title">Completion notifications</span>
-              <span className="toggle-sub">Notify when a download finishes</span>
-            </span>
-            <input
-              type="checkbox"
-              checked={form.notify_on_complete}
-              onChange={(e) => set("notify_on_complete", e.target.checked)}
-            />
-          </label>
-
-          <label className="toggle-row">
-            <span>
-              <span className="toggle-title">Download Scheduler</span>
-              <span className="toggle-sub">
-                Automatically download only during scheduled off-peak hours
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={form.schedule_enabled}
-              onChange={(e) => set("schedule_enabled", e.target.checked)}
-            />
-          </label>
-
-          {form.schedule_enabled && (
-            <div className="field-row schedule-time-row">
-              <label className="field grow">
-                <span className="field-label">Start time</span>
+              <label className="toggle-row">
+                <span>
+                  <span className="toggle-title">Auto-categorize downloads</span>
+                  <span className="toggle-sub">
+                    Organize downloads into subfolders (Videos, Documents, Music, Archives, Programs)
+                  </span>
+                </span>
                 <input
-                  type="time"
-                  value={form.schedule_start_time}
-                  onChange={(e) => set("schedule_start_time", e.target.value)}
+                  type="checkbox"
+                  checked={form.auto_categorize}
+                  onChange={(e) => set("auto_categorize", e.target.checked)}
                 />
               </label>
-              <label className="field grow">
-                <span className="field-label">Stop time</span>
+
+              <label className="toggle-row">
+                <span>
+                  <span className="toggle-title">Completion notifications</span>
+                  <span className="toggle-sub">Notify when a download finishes</span>
+                </span>
                 <input
-                  type="time"
-                  value={form.schedule_stop_time}
-                  onChange={(e) => set("schedule_stop_time", e.target.value)}
+                  type="checkbox"
+                  checked={form.notify_on_complete}
+                  onChange={(e) => set("notify_on_complete", e.target.checked)}
                 />
               </label>
-            </div>
+
+              <label className="toggle-row">
+                <span>
+                  <span className="toggle-title">Close to System Tray</span>
+                  <span className="toggle-sub">
+                    Keep downloading in the background when closing the window
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={form.close_to_tray}
+                  onChange={(e) => set("close_to_tray", e.target.checked)}
+                />
+              </label>
+
+              <label className="toggle-row">
+                <span>
+                  <span className="toggle-title">Watch clipboard</span>
+                  <span className="toggle-sub">
+                    Suggest adding URLs / magnet links you copy
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={form.watch_clipboard}
+                  onChange={(e) => set("watch_clipboard", e.target.checked)}
+                />
+              </label>
+            </>
           )}
 
-          <label className="toggle-row">
-            <span>
-              <span className="toggle-title">Auto-shutdown PC on finish</span>
-              <span className="toggle-sub">
-                Put PC to sleep or shutdown when all active downloads complete
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={form.shutdown_on_finish}
-              onChange={(e) => set("shutdown_on_finish", e.target.checked)}
-            />
-          </label>
+          {activeTab === "scheduler" && (
+            <>
+              <label className="toggle-row">
+                <span>
+                  <span className="toggle-title">Download Scheduler</span>
+                  <span className="toggle-sub">
+                    Automatically download only during scheduled off-peak hours
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={form.schedule_enabled}
+                  onChange={(e) => set("schedule_enabled", e.target.checked)}
+                />
+              </label>
 
-          <label className="toggle-row">
-            <span>
-              <span className="toggle-title">Close to System Tray</span>
-              <span className="toggle-sub">
-                Keep downloading in the background when closing the window
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={form.close_to_tray}
-              onChange={(e) => set("close_to_tray", e.target.checked)}
-            />
-          </label>
+              {form.schedule_enabled && (
+                <div className="field-row schedule-time-row">
+                  <label className="field grow">
+                    <span className="field-label">Start time</span>
+                    <input
+                      type="time"
+                      value={form.schedule_start_time}
+                      onChange={(e) => set("schedule_start_time", e.target.value)}
+                    />
+                  </label>
+                  <label className="field grow">
+                    <span className="field-label">Stop time</span>
+                    <input
+                      type="time"
+                      value={form.schedule_stop_time}
+                      onChange={(e) => set("schedule_stop_time", e.target.value)}
+                    />
+                  </label>
+                </div>
+              )}
 
-          <label className="toggle-row">
-            <span>
-              <span className="toggle-title">Watch clipboard</span>
-              <span className="toggle-sub">
-                Suggest adding URLs / magnet links you copy
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={form.watch_clipboard}
-              onChange={(e) => set("watch_clipboard", e.target.checked)}
-            />
-          </label>
+              <label className="toggle-row">
+                <span>
+                  <span className="toggle-title">Auto-shutdown PC on finish</span>
+                  <span className="toggle-sub">
+                    Put PC to sleep or shutdown when all active downloads complete
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={form.shutdown_on_finish}
+                  onChange={(e) => set("shutdown_on_finish", e.target.checked)}
+                />
+              </label>
+            </>
+          )}
+
+          {activeTab === "extension" && (
+            <div className="extension-guide">
+              <div className="extension-guide-intro">
+                <strong>Bits Browser Companion Extension</strong>
+                <p>
+                  Download files directly from Chrome, Edge, Brave, and Firefox via right-click or automatic download interception.
+                </p>
+              </div>
+
+              <div className="extension-guide-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={openExtensionFolder}
+                >
+                  <FolderIcon width={15} height={15} /> Open Extension Folder
+                </button>
+              </div>
+
+              <div className="extension-steps">
+                <div className="step-item">
+                  <span className="step-num">1</span>
+                  <div className="step-body">
+                    <strong>Chrome, Edge & Brave:</strong>
+                    <span>Open <code>chrome://extensions</code> or <code>edge://extensions</code>, enable <em>Developer mode</em>, and click <em>Load unpacked</em> on the extension folder.</span>
+                  </div>
+                </div>
+
+                <div className="step-item">
+                  <span className="step-num">2</span>
+                  <div className="step-body">
+                    <strong>Firefox:</strong>
+                    <span>Open <code>about:debugging#/runtime/this-firefox</code>, click <em>Load Temporary Add-on…</em> and select <code>manifest.json</code> in the extension folder.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {error && <div className="form-error">{error}</div>}
         </div>

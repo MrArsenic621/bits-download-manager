@@ -26,6 +26,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "Bits Download Manager",
+    "copyright": "Copyright © 2026 Bits Download Manager",
+    "category": "Utility",
+    "shortDescription": "Fast, modern download manager powered by aria2",
     "resources": ["bin/windows/aria2c.exe"],
     "icon": [
       "icons/32x32.png",
@@ -33,6 +37,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": false
+      },
+      "wix": {
+        "language": "en-US"
+      }
+    }
   }
 }
