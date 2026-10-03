@@ -29,17 +29,30 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo build
-        uses: actions/cache@v4
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          workspaces: src-tauri
 
       - name: Install frontend dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
+
+      - name: Set release version from tag
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart("v")
+          if (-not $ver -or $ver -eq "main") { $ver = "2.0.0" }
+          Write-Host "Setting project version to $ver"
+          
+          # Update tauri.conf.json
+          $tauriCfg = Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json
+          $tauriCfg.version = $ver
+          $tauriCfg | ConvertTo-Json -Depth 10 | Set-Content src-tauri/tauri.conf.json
+
+          # Update package.json
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          $pkg.version = $ver
+          $pkg | ConvertTo-Json -Depth 10 | Set-Content package.json
 
       - name: Build Tauri app
         # Runs `tsc && vite build` (beforeBuildCommand), then the release
