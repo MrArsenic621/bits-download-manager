@@ -2,6 +2,7 @@ import { useAria2 } from "../context/Aria2Provider";
 import type { Download, FilterKey } from "../types";
 import { formatSpeed } from "../lib/format";
 import { ArrowDownIcon, ArrowUpIcon } from "../lib/icons";
+import BandwidthGraph from "./BandwidthGraph";
 
 const ITEMS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All downloads" },
@@ -51,6 +52,10 @@ export default function Sidebar({ filter, onFilter }: Props) {
 
       <div className="sidebar-footer">
         {!connected && <div className="engine-offline">aria2 offline</div>}
+        <BandwidthGraph
+          downloadSpeed={global.download_speed}
+          uploadSpeed={global.upload_speed}
+        />
         <div className="transfer">
           <span className="transfer-row">
             <ArrowDownIcon width={14} height={14} />

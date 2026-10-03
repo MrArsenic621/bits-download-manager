@@ -13,6 +13,7 @@
 ## Features
 
 - **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Live Bandwidth Speed Graph** — Real-time SVG throughput sparkline chart with sliding 30-second window and peak speed detection.
 - **Smart Clipboard Link Watcher** — Detects copied URLs and magnet links automatically with single or multi-link batch import.
 - **Batch Downloading** — Paste multiple URLs separated by newlines to queue downloads at once.
 - **BitTorrent & Magnet Links** — Native support for downloading via `.torrent` files and `magnet:?` URIs.
@@ -34,7 +35,7 @@
 ```
 bits-download-manager/
 ├── src/                          # React 19 frontend (Vite + TypeScript)
-│   ├── components/               # UI components (DownloadList, Modals, Toolbar, Sidebar)
+│   ├── components/               # UI components (DownloadList, Modals, Toolbar, Sidebar, BandwidthGraph)
 │   ├── context/                  # Aria2Provider managing state and Tauri RPC events
 │   ├── lib/                      # SVG icons and format helpers
 │   └── App.tsx                   # Main layout, keyboard listeners & clipboard watcher

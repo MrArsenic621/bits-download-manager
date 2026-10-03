@@ -176,6 +176,45 @@ body {
   margin-bottom: 4px;
 }
 
+.bandwidth-graph-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 2px;
+}
+
+.bandwidth-graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+}
+
+.bandwidth-graph-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-faint);
+}
+
+.bandwidth-graph-peak {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.bandwidth-graph-svg {
+  width: 100%;
+  height: 44px;
+  display: block;
+  overflow: visible;
+  cursor: crosshair;
+}
+
 .transfer {
   display: flex;
   justify-content: space-between;
