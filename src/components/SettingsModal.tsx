@@ -30,6 +30,7 @@ export default function SettingsModal({ onClose }: Props) {
           global_speed_limit: 0,
           notify_on_complete: true,
           watch_clipboard: true,
+          auto_categorize: true,
         },
   );
   const [error, setError] = useState<string | null>(null);
@@ -121,6 +122,20 @@ export default function SettingsModal({ onClose }: Props) {
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="toggle-row">
+            <span>
+              <span className="toggle-title">Auto-categorize downloads</span>
+              <span className="toggle-sub">
+                Organize downloads into subfolders (Videos, Documents, Music, Archives, Programs)
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={form.auto_categorize}
+              onChange={(e) => set("auto_categorize", e.target.checked)}
+            />
           </label>
 
           <label className="toggle-row">

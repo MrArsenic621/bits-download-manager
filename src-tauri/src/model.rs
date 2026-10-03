@@ -62,6 +62,7 @@ pub struct Settings {
     pub global_speed_limit: u64,
     pub notify_on_complete: bool,
     pub watch_clipboard: bool,
+    pub auto_categorize: bool,
 }
 
 impl Default for Settings {
@@ -73,7 +74,29 @@ impl Default for Settings {
             global_speed_limit: 0,
             notify_on_complete: true,
             watch_clipboard: true,
+            auto_categorize: true,
         }
+    }
+}
+
+pub fn detect_category(filename_or_uri: &str) -> Option<&'static str> {
+    let clean = filename_or_uri.split('?').next().unwrap_or(filename_or_uri);
+    let clean = clean.split('#').next().unwrap_or(clean);
+    let ext = std::path::Path::new(clean)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_lowercase())?;
+
+    match ext.as_str() {
+        "mp4" | "mkv" | "avi" | "mov" | "wmv" | "flv" | "webm" | "m4v" | "ts" | "3gp" => {
+            Some("Videos")
+        }
+        "mp3" | "flac" | "wav" | "aac" | "ogg" | "m4a" | "wma" | "opus" => Some("Audio"),
+        "pdf" | "docx" | "doc" | "xlsx" | "xls" | "pptx" | "ppt" | "txt" | "epub" | "csv"
+        | "md" | "rtf" => Some("Documents"),
+        "zip" | "rar" | "7z" | "tar" | "gz" | "bz2" | "xz" | "iso" | "dmg" => Some("Archives"),
+        "exe" | "msi" | "apk" | "deb" | "rpm" | "appimage" => Some("Programs"),
+        _ => None,
     }
 }
 

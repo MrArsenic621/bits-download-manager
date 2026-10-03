@@ -432,7 +432,7 @@ impl Aria2Process {
 }
 
 /// Prefer the user's Downloads folder; fall back to the app data dir.
-fn default_download_dir(app_data: &PathBuf) -> PathBuf {
+pub fn default_download_dir(app_data: &PathBuf) -> PathBuf {
     if let Ok(profile) = std::env::var("USERPROFILE") {
         let downloads = PathBuf::from(profile).join("Downloads");
         if downloads.exists() {

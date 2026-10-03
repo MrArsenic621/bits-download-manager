@@ -13,6 +13,7 @@
 ## Features
 
 - **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Smart Auto-Categorization** — Organizes downloads into subfolders (`Videos/`, `Documents/`, `Audio/`, `Archives/`, `Programs/`) by file extension with color-coded badges.
 - **Live Bandwidth Speed Graph** — Real-time SVG throughput sparkline chart with sliding 30-second window and peak speed detection.
 - **Smart Clipboard Link Watcher** — Detects copied URLs and magnet links automatically with single or multi-link batch import.
 - **Batch Downloading** — Paste multiple URLs separated by newlines to queue downloads at once.

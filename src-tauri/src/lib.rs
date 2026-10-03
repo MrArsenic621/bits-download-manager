@@ -53,19 +53,38 @@ async fn add_download(
     let client = state.client()?;
     let sync = state.sync.clone();
     let defaults = state.settings.lock().unwrap().clone();
+    let app_data = state
+        .settings_path
+        .parent()
+        .map(PathBuf::from)
+        .unwrap_or_default();
 
     tauri::async_runtime::spawn_blocking(move || {
         let mut options = serde_json::Map::new();
 
-        let dir = dir.or(if defaults.default_dir.is_empty() {
-            None
+        let resolved_dir = if let Some(custom_dir) = dir.filter(|d| !d.trim().is_empty()) {
+            custom_dir
         } else {
-            Some(defaults.default_dir.clone())
-        });
-        if let Some(dir) = dir.as_ref() {
-            std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-            options.insert("dir".into(), Value::String(dir.clone()));
-        }
+            let base = if !defaults.default_dir.is_empty() {
+                PathBuf::from(&defaults.default_dir)
+            } else {
+                aria2::default_download_dir(&app_data)
+            };
+            if defaults.auto_categorize {
+                let target_name = out.as_deref().unwrap_or(&uri);
+                if let Some(category) = model::detect_category(target_name) {
+                    base.join(category).to_string_lossy().into_owned()
+                } else {
+                    base.to_string_lossy().into_owned()
+                }
+            } else {
+                base.to_string_lossy().into_owned()
+            }
+        };
+
+        std::fs::create_dir_all(&resolved_dir).map_err(|e| e.to_string())?;
+        options.insert("dir".into(), Value::String(resolved_dir));
+
         if let Some(out) = out.as_ref() {
             if !out.is_empty() {
                 options.insert("out".into(), Value::String(out.clone()));

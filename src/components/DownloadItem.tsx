@@ -2,6 +2,7 @@ import { useAria2, type AddDownloadOptions } from "../context/Aria2Provider";
 import { openPath } from "@tauri-apps/plugin-opener";
 import type { Download } from "../types";
 import { formatBytes, formatEta, formatSpeed, hostOf } from "../lib/format";
+import { getFileCategory } from "../lib/categories";
 import {
   AlertIcon,
   CheckCircleIcon,
@@ -165,6 +166,8 @@ export default function DownloadItem({
     </select>
   ) : null;
 
+  const category = getFileCategory(d.filename || d.uri);
+
   return (
     <article
       className={`download-item status-${d.status} ${selected ? "selected" : ""}`}
@@ -184,6 +187,13 @@ export default function DownloadItem({
           <span className="item-name" title={d.filename}>
             {d.filename || "(unknown)"}
           </span>
+          {category !== "Other" && (
+            <span
+              className={`badge badge-category badge-cat-${category.toLowerCase()}`}
+            >
+              {category}
+            </span>
+          )}
           <span className={`badge badge-${d.status}`}>{statusLabel}</span>
           {isActive && (
             <span className="item-percent">{Math.floor(d.progress)}%</span>

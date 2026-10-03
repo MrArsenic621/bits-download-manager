@@ -539,6 +539,38 @@ body {
   flex-shrink: 0;
 }
 
+.badge-category {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  font-size: 10px;
+}
+
+.badge-cat-videos {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
+.badge-cat-audio {
+  color: #f472b6;
+  border-color: rgba(244, 114, 182, 0.35);
+}
+
+.badge-cat-documents {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.badge-cat-archives {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.badge-cat-programs {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
 .badge-active {
   background: var(--accent-soft);
   color: var(--accent);

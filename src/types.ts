@@ -54,4 +54,5 @@ export interface Settings {
   global_speed_limit: number;
   notify_on_complete: boolean;
   watch_clipboard: boolean;
+  auto_categorize: boolean;
 }
