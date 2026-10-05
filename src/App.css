@@ -803,26 +803,13 @@ body {
 .modal {
   width: 480px;
   max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px); /* Add this */
+  display: flex;
+  flex-direction: column;         /* Ensure it handles flex correctly for scrolling */
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: 14px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
-}
-
-.modal-sm {
-  width: 380px;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px 0;
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 15px;
 }
 
 .modal-body {
@@ -830,6 +817,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-y: auto;          /* Add this to allow inner scroll */
+}
+
+.modal-sm {
+  width: 380px;
 }
 
 .advanced-toggle-row {
