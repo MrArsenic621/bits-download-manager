@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { useAria2 } from "../context/Aria2Provider";
 import type { Settings } from "../types";
 import { CloseIcon, FolderIcon, TrashIcon, PlusIcon } from "../lib/icons";
@@ -74,14 +73,6 @@ export default function SettingsModal({ onClose }: Props) {
   const browse = async () => {
     const dir = await open({ directory: true, title: "Choose default folder" });
     if (typeof dir === "string") set("default_dir", dir);
-  };
-
-  const openExtensionFolder = async () => {
-    try {
-      await openPath("extension");
-    } catch {
-      // fallback
-    }
   };
 
   const save = async () => {

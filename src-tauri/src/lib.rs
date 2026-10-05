@@ -450,6 +450,72 @@ async fn shutdown_pc(action: String) -> Result<(), String> {
     .map_err(|e| e.to_string())?
 }
 
+/// Fetch stream metadata using yt-dlp.
+#[tauri::command]
+async fn fetch_stream_metadata(url: String, state: tauri::State<'_, AppState>) -> Result<model::StreamMetadata, String> {
+    let app_data = state
+        .settings_path
+        .parent()
+        .map(PathBuf::from)
+        .unwrap_or_default();
+    
+    // Resolve yt-dlp path (bundled as resource)
+    let bin_dir = app_data.join("bin");
+    let ytdlp_path = bin_dir.join("yt-dlp.exe");
+
+    // Copy from resources if not already in app_data (same pattern as aria2)
+    if !ytdlp_path.exists() {
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                 let fallback = dir.join("yt-dlp.exe");
+                 if fallback.exists() {
+                    std::fs::create_dir_all(&bin_dir).map_err(|e| e.to_string())?;
+                    std::fs::copy(&fallback, &ytdlp_path).map_err(|e| e.to_string())?;
+                 }
+            }
+        }
+    }
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut cmd = std::process::Command::new(ytdlp_path);
+        cmd.args(["--dump-json", "--no-warnings", &url]);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+        
+        let output = cmd.output().map_err(|e| format!("failed to run yt-dlp: {e}"))?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+
+        let json_str = String::from_utf8(output.stdout).map_err(|_| "invalid utf-8 output")?;
+        let root: Value = serde_json::from_str(&json_str).map_err(|_| "invalid json output")?;
+
+        let title = root.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled").to_string();
+        let mut formats = Vec::new();
+
+        if let Some(fmts) = root.get("formats").and_then(|v| v.as_array()) {
+            for f in fmts {
+                // Filter meaningful video/audio formats
+                if let (Some(fmt_id), Some(ext)) = (f.get("format_id").and_then(|v| v.as_str()), f.get("ext").and_then(|v| v.as_str())) {
+                    formats.push(model::StreamFormat {
+                        format_id: fmt_id.to_string(),
+                        ext: ext.to_string(),
+                        resolution: f.get("resolution").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        note: f.get("format_note").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                    });
+                }
+            }
+        }
+
+        Ok(model::StreamMetadata { title, formats })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 fn lookup_download(sync: &SyncContext, gid: &str) -> Option<Download> {
     let snapshot = sync.snapshot.lock().unwrap();
     snapshot
@@ -643,6 +709,7 @@ pub fn run() {
             set_speed_limit,
             calculate_checksum,
             shutdown_pc,
+            fetch_stream_metadata,
             get_vault,
             update_vault,
         ])

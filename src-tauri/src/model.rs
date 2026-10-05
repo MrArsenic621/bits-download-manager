@@ -101,6 +101,20 @@ pub struct VaultEntry {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Vault(pub Vec<VaultEntry>);
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StreamFormat {
+    pub format_id: String,
+    pub ext: String,
+    pub resolution: Option<String>,
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StreamMetadata {
+    pub title: String,
+    pub formats: Vec<StreamFormat>,
+}
+
 
 pub fn detect_category(filename_or_uri: &str) -> Option<&'static str> {
     let clean = filename_or_uri.split('?').next().unwrap_or(filename_or_uri);
