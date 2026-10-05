@@ -63,3 +63,15 @@ export interface Settings {
   close_to_tray: boolean;
   global_proxy: string;
 }
+
+export interface StreamFormat {
+  format_id: string;
+  ext: string;
+  resolution: string | null;
+  note: string | null;
+}
+
+export interface StreamMetadata {
+  title: string;
+  formats: StreamFormat[];
+}

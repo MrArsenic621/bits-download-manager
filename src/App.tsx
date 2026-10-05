@@ -23,6 +23,10 @@ function extractUrls(text: string): string[] {
   return Array.from(new Set(cleaned));
 }
 
+export function isStreamingUrl(url: string): boolean {
+  return url.includes("youtube.com") || url.includes("youtu.be");
+}
+
 export default function App() {
   const { del, remove, pause, resume, snapshot, settings } = useAria2();
   const [filter, setFilter] = useState<FilterKey>("all");
