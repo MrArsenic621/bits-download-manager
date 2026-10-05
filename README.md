@@ -13,6 +13,7 @@
 ## Features
 
 - **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Drag & Drop Floating Drop-Zone** — Drag URLs, magnet links, or text directly from your browser and drop anywhere on the window to queue downloads.
 - **Browser Extension Companion** — Chrome, Edge, and Firefox Manifest V3 companion extension for right-click download and automatic browser interception.
 - **System Tray & Background Mode** — Minimize to Windows system tray with quick action menu (Show/Hide, Pause/Resume All, Quit) and close-to-tray background persistence.
 - **Download Scheduler & Auto-Shutdown** — Automatically run queue during scheduled off-peak hours (e.g. 1 AM – 7 AM) and put PC to sleep / shutdown when complete.

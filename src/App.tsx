@@ -9,7 +9,7 @@ import NewDownloadModal from "./components/NewDownloadModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 import SettingsModal from "./components/SettingsModal";
 import ChecksumModal from "./components/ChecksumModal";
-import { PauseIcon, PlayIcon, CloseIcon, TrashIcon } from "./lib/icons";
+import { PauseIcon, PlayIcon, CloseIcon, TrashIcon, DownloadIcon } from "./lib/icons";
 
 const URL_GLOBAL_RE =
   /(https?:\/\/[^\s<>"']+|magnet:\?[^\s<>"']+)/gi;
@@ -33,6 +33,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [checksumTarget, setChecksumTarget] = useState<Download | null>(null);
   const [clipboardUrls, setClipboardUrls] = useState<string[] | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const lastDetected = useRef<string>("");
   const [confirm, setConfirm] = useState<{
     title: string;
@@ -142,10 +143,62 @@ export default function App() {
       },
     });
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only hide if we leave the main window
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (
+      e.clientX <= rect.left ||
+      e.clientX >= rect.right ||
+      e.clientY <= rect.top ||
+      e.clientY >= rect.bottom
+    ) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const text =
+      e.dataTransfer.getData("text/plain") ||
+      e.dataTransfer.getData("text/uri-list");
+    if (!text) return;
+
+    const urls = extractUrls(text);
+    if (urls.length > 0) {
+      setClipboardUrls(urls);
+      setNewOpen(true);
+    }
+  };
+
   const selectedCount = selected.size;
 
   return (
-    <div className="app">
+    <div
+      className="app"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div className="drop-overlay">
+          <div className="drop-content">
+            <DownloadIcon width={48} height={48} />
+            <h2>Drop to Download</h2>
+            <p>Release links or text to instantly queue downloads</p>
+          </div>
+        </div>
+      )}
       <Sidebar filter={filter} onFilter={setFilter} />
 
       <main className="main">
