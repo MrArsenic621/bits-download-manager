@@ -1223,6 +1223,58 @@ body {
   border: 1px solid rgba(248, 113, 113, 0.35);
 }
 
+.item-expanded-panel {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: toast-in 0.15s ease;
+}
+
+.panel-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.panel-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.stat-value {
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.path-value:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.error-stat {
+  grid-column: 1 / -1;
+}
+
+.panel-graph {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

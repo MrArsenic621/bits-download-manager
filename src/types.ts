@@ -20,6 +20,7 @@ export interface Download {
   eta_secs: number | null;
   error_message: string | null;
   created_at: number;
+  connections: number;
 }
 
 export interface GlobalStat {

@@ -13,6 +13,7 @@
 ## Features
 
 - **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Expanded Item Details** — Expandable download items showing per-file speed graphs, thread counts, and exact disk path.
 - **Quick Speed Profiles** — 1-click toolbar presets (`⚡ Max Speed`, `🎮 Gaming / Stream`, `🌱 Eco Saver`) for instant bandwidth & concurrency allocation.
 - **Drag & Drop Floating Drop-Zone** — Drag URLs, magnet links, or text directly from your browser and drop anywhere on the window to queue downloads.
 - **Browser Extension Companion** — Chrome, Edge, and Firefox Manifest V3 companion extension for right-click download and automatic browser interception.

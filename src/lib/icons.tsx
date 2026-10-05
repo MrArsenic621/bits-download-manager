@@ -117,6 +117,18 @@ export const ShieldCheckIcon = (props: IconProps) => (
   </svg>
 );
 
+export const ChevronDownIcon = (props: IconProps) => (
+  <svg {...base(props)}>
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+export const ChevronUpIcon = (props: IconProps) => (
+  <svg {...base(props)}>
+    <polyline points="18 15 12 9 6 15" />
+  </svg>
+);
+
 export const CheckCircleIcon = (props: IconProps) => (
   <svg {...base(props)}>
     <circle cx="12" cy="12" r="9" />

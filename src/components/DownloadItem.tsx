@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAria2, type AddDownloadOptions } from "../context/Aria2Provider";
 import { openPath } from "@tauri-apps/plugin-opener";
 import type { Download } from "../types";
@@ -14,7 +15,10 @@ import {
   ShieldCheckIcon,
   TrashIcon,
   XCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from "../lib/icons";
+import BandwidthGraph from "./BandwidthGraph";
 
 const STATUS_LABEL: Record<string, string> = {
   active: "Downloading",
@@ -51,6 +55,7 @@ export default function DownloadItem({
   onVerifyChecksum,
 }: Props) {
   const { pause, resume, remove, addDownload, setSpeedLimit } = useAria2();
+  const [expanded, setExpanded] = useState(false);
 
   const statusLabel = STATUS_LABEL[d.status] ?? d.status;
   const isActive = d.status === "active";
@@ -257,7 +262,51 @@ export default function DownloadItem({
         >
           <TrashIcon width={16} height={16} />
         </button>
+        <button
+          className="icon-btn expand-btn"
+          onClick={() => setExpanded(!expanded)}
+          title="Details"
+        >
+          {expanded ? <ChevronUpIcon width={16} height={16} /> : <ChevronDownIcon width={16} height={16} />}
+        </button>
       </div>
+
+      {expanded && (
+        <div className="item-expanded-panel">
+          <div className="panel-stats">
+            <div className="panel-stat">
+              <span className="stat-label">Connections</span>
+              <span className="stat-value">{d.connections}</span>
+            </div>
+            <div className="panel-stat">
+              <span className="stat-label">Save Path</span>
+              <span className="stat-value path-value" title={d.dir || d.filename}>
+                {d.dir || "Default"}
+              </span>
+            </div>
+            {d.error_message && (
+              <div className="panel-stat error-stat">
+                <span className="stat-label">Error</span>
+                <span className="stat-value">{d.error_message}</span>
+              </div>
+            )}
+            <div className="panel-stat">
+              <span className="stat-label">Created At</span>
+              <span className="stat-value">
+                {new Date(d.created_at * 1000).toLocaleString()}
+              </span>
+            </div>
+          </div>
+          {isActive && (
+            <div className="panel-graph">
+              <BandwidthGraph
+                downloadSpeed={d.download_speed}
+                uploadSpeed={0}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </article>
   );
 }

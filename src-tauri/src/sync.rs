@@ -96,6 +96,8 @@ fn value_to_download(raw: &Value, created_at: u64) -> Download {
         .get("errorMessage")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
+        
+    let connections = as_u64(raw.get("connections")) as u32;
 
     let progress = if total > 0 {
         (completed as f64 / total as f64) * 100.0
@@ -122,6 +124,7 @@ fn value_to_download(raw: &Value, created_at: u64) -> Download {
         eta_secs,
         error_message,
         created_at,
+        connections,
     }
 }
 

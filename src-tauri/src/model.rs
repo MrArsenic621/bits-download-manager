@@ -16,6 +16,7 @@ pub struct Download {
     pub eta_secs: Option<u64>,
     pub error_message: Option<String>,
     pub created_at: u64,
+    pub connections: u32,
 }
 
 impl Download {
