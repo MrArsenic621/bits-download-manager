@@ -13,8 +13,8 @@
 ## Features
 
 - **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Global & Per-Download Proxy Support** — Native SOCKS5/HTTP proxy support for both aria2 daemon and yt-dlp to bypass geo-restrictions or network throttling.
 - **Expanded Item Details** — Expandable download items showing per-file speed graphs, thread counts, and exact disk path.
-- **Quick Speed Profiles** — 1-click toolbar presets (`⚡ Max Speed`, `🎮 Gaming / Stream`, `🌱 Eco Saver`) for instant bandwidth & concurrency allocation.
 - **Drag & Drop Floating Drop-Zone** — Drag URLs, magnet links, or text directly from your browser and drop anywhere on the window to queue downloads.
 - **Browser Extension Companion** — Chrome, Edge, and Firefox Manifest V3 companion extension for right-click download and automatic browser interception.
 - **System Tray & Background Mode** — Minimize to Windows system tray with quick action menu (Show/Hide, Pause/Resume All, Quit) and close-to-tray background persistence.

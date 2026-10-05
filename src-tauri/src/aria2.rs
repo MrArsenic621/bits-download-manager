@@ -326,6 +326,10 @@ impl Aria2Process {
         if settings.global_speed_limit > 0 {
             args.push(format!("--max-overall-download-limit={}", settings.global_speed_limit));
         }
+        if !settings.global_proxy.is_empty() {
+            args.push(format!("--all-proxy={}", settings.global_proxy));
+        }
+
 
         let mut cmd = Command::new(&binary);
         cmd.args(args);

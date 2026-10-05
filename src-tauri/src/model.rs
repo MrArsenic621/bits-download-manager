@@ -69,6 +69,7 @@ pub struct Settings {
     pub schedule_stop_time: String,
     pub shutdown_on_finish: bool,
     pub close_to_tray: bool,
+    pub global_proxy: String,
 }
 
 impl Default for Settings {
@@ -86,6 +87,7 @@ impl Default for Settings {
             schedule_stop_time: "07:00".into(),
             shutdown_on_finish: false,
             close_to_tray: true,
+            global_proxy: String::new(),
         }
     }
 }

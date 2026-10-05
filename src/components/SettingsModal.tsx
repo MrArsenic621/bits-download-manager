@@ -39,6 +39,7 @@ export default function SettingsModal({ onClose }: Props) {
           schedule_stop_time: "07:00",
           shutdown_on_finish: false,
           close_to_tray: true,
+          global_proxy: "",
         },
   );
   const [vault, setVault] = useState<any[]>([]);
@@ -185,6 +186,16 @@ export default function SettingsModal({ onClose }: Props) {
                     </option>
                   ))}
                 </select>
+              </label>
+
+              <label className="field">
+                <span className="field-label">Global Proxy (e.g. socks5://127.0.0.1:1080)</span>
+                <input
+                  value={form.global_proxy}
+                  onChange={(e) => set("global_proxy", e.target.value)}
+                  placeholder="Leave empty to use direct connection"
+                  spellCheck={false}
+                />
               </label>
 
               <label className="toggle-row">

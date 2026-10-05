@@ -476,9 +476,16 @@ async fn fetch_stream_metadata(url: String, state: tauri::State<'_, AppState>) -
         }
     }
 
+    let settings = state.settings.lock().unwrap().clone();
+
     tauri::async_runtime::spawn_blocking(move || {
         let mut cmd = std::process::Command::new(ytdlp_path);
         cmd.args(["--dump-json", "--no-warnings", &url]);
+        
+        if !settings.global_proxy.is_empty() {
+            cmd.args(["--proxy", &settings.global_proxy]);
+        }
+        
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;

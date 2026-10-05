@@ -61,4 +61,5 @@ export interface Settings {
   schedule_stop_time: string;
   shutdown_on_finish: boolean;
   close_to_tray: boolean;
+  global_proxy: string;
 }
