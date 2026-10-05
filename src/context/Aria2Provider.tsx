@@ -42,6 +42,8 @@ interface Aria2ContextType {
   clearFinished: () => Promise<void>;
   updateSettings: (settings: Settings) => Promise<void>;
   setSpeedLimit: (gid: string, limit: number) => Promise<void>;
+  getVault: () => Promise<any[]>;
+  updateVault: (vault: any[]) => Promise<void>;
 }
 
 const Aria2Context = createContext<Aria2ContextType | undefined>(undefined);
@@ -212,6 +214,16 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
     [],
   );
 
+  const getVault = useCallback(
+    () => invoke("get_vault") as Promise<any[]>,
+    [],
+  );
+
+  const updateVault = useCallback(
+    (vault: any[]) => invoke("update_vault", { vault }) as Promise<void>,
+    [],
+  );
+
   return (
     <Aria2Context.Provider
       value={{
@@ -229,6 +241,8 @@ export const Aria2Provider: React.FC<{ children: React.ReactNode }> = ({
         clearFinished,
         updateSettings,
         setSpeedLimit,
+        getVault,
+        updateVault,
       }}
     >
       {children}

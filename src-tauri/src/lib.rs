@@ -4,9 +4,10 @@ mod history;
 mod model;
 mod settings;
 mod sync;
+mod vault;
 
 use aria2::{Aria2Process, RpcClient};
-use model::{Download, Settings, Snapshot};
+use model::{Download, Settings, Snapshot, Vault};
 use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -21,6 +22,8 @@ struct AppState {
     sync: Arc<SyncContext>,
     settings: Arc<Mutex<Settings>>,
     settings_path: PathBuf,
+    vault: Arc<Mutex<Vault>>,
+    vault_path: PathBuf,
 }
 
 impl AppState {
@@ -64,6 +67,23 @@ async fn add_download(
         .parent()
         .map(PathBuf::from)
         .unwrap_or_default();
+    
+    let host = url::Url::parse(&uri)
+        .ok()
+        .and_then(|u| u.domain().map(|d| d.to_string()));
+    
+    let mut auth_user = auth_user;
+    let mut auth_pass = auth_pass;
+    let mut cookies = cookie;
+
+    if let Some(host) = host {
+        let vault = state.vault.lock().unwrap();
+        if let Some(entry) = vault.0.iter().find(|e| host.ends_with(&e.domain)) {
+            if auth_user.is_none() { auth_user = entry.auth_user.clone(); }
+            if auth_pass.is_none() { auth_pass = entry.auth_pass.clone(); }
+            if cookies.is_none() { cookies = entry.cookies.clone(); }
+        }
+    }
 
     tauri::async_runtime::spawn_blocking(move || {
         let mut options = serde_json::Map::new();
@@ -110,7 +130,7 @@ async fn add_download(
         if let Some(ua) = user_agent.filter(|s| !s.trim().is_empty()) {
             options.insert("user-agent".into(), Value::String(ua.trim().to_string()));
         }
-        if let Some(c) = cookie.filter(|s| !s.trim().is_empty()) {
+        if let Some(c) = cookies.filter(|s| !s.trim().is_empty()) {
             options.insert(
                 "header".into(),
                 Value::Array(vec![Value::String(format!("Cookie: {}", c.trim()))]),
@@ -336,7 +356,20 @@ async fn set_speed_limit(
     .map_err(|e| e.to_string())?
 }
 
-/// Calculate SHA-256, SHA-1, or MD5 checksum for a file on disk.
+#[tauri::command]
+fn get_vault(state: tauri::State<AppState>) -> Vault {
+    state.vault.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn update_vault(state: tauri::State<AppState>, vault: Vault) -> Result<(), String> {
+    let path = state.vault_path.clone();
+    if let Ok(mut guard) = state.vault.lock() {
+        *guard = vault.clone();
+    }
+    vault::save(&path, &vault);
+    Ok(())
+}
 #[tauri::command]
 async fn calculate_checksum(path: String, algorithm: String) -> Result<String, String> {
     use sha2::{Digest, Sha256};
@@ -468,6 +501,7 @@ pub fn run() {
             };
 
             let history_path = app_data.join("history.json");
+            let vault_path = app_data.join("vault.json");
 
             let sync = Arc::new(SyncContext {
                 snapshot: Arc::new(Mutex::new(Snapshot::default())),
@@ -500,6 +534,8 @@ pub fn run() {
                 sync,
                 settings: Arc::new(Mutex::new(settings)),
                 settings_path,
+                vault: Arc::new(Mutex::new(vault::load(&vault_path))),
+                vault_path,
             });
 
             use tauri::menu::{Menu, MenuItem};
@@ -607,6 +643,8 @@ pub fn run() {
             set_speed_limit,
             calculate_checksum,
             shutdown_pc,
+            get_vault,
+            update_vault,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

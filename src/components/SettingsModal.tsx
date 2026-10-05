@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useAria2 } from "../context/Aria2Provider";
 import type { Settings } from "../types";
-import { CloseIcon, FolderIcon } from "../lib/icons";
+import { CloseIcon, FolderIcon, TrashIcon, PlusIcon } from "../lib/icons";
 
 const SPEED_LIMITS: { label: string; value: number }[] = [
   { label: "Unlimited", value: 0 },
@@ -22,7 +22,7 @@ interface Props {
 type TabKey = "general" | "scheduler" | "extension";
 
 export default function SettingsModal({ onClose }: Props) {
-  const { settings, updateSettings } = useAria2();
+  const { settings, updateSettings, getVault, updateVault } = useAria2();
   const [activeTab, setActiveTab] = useState<TabKey>("general");
   const [form, setForm] = useState<Settings>(() =>
     settings
@@ -42,8 +42,31 @@ export default function SettingsModal({ onClose }: Props) {
           close_to_tray: true,
         },
   );
+  const [vault, setVault] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "extension") {
+        getVault().then(setVault).catch(() => {});
+    }
+  }, [activeTab, getVault]);
+
+  const addVaultEntry = () => {
+    const newEntry = { domain: "", auth_user: "", auth_pass: "", cookies: "" };
+    setVault([...vault, newEntry]);
+  };
+
+  const updateVaultEntry = (index: number, key: string, value: string) => {
+    const next = [...vault];
+    next[index][key] = value;
+    setVault(next);
+  };
+
+  const removeVaultEntry = (index: number) => {
+    setVault(vault.filter((_, i) => i !== index));
+  };
+
 
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -66,6 +89,7 @@ export default function SettingsModal({ onClose }: Props) {
     setError(null);
     try {
       await updateSettings(form);
+      await updateVault(vault);
       onClose();
     } catch (e) {
       setError(String(e));
@@ -284,38 +308,21 @@ export default function SettingsModal({ onClose }: Props) {
           {activeTab === "extension" && (
             <div className="extension-guide">
               <div className="extension-guide-intro">
-                <strong>Bits Browser Companion Extension</strong>
-                <p>
-                  Download files directly from Chrome, Edge, Brave, and Firefox via right-click or automatic download interception.
-                </p>
+                <strong>Credentials Vault</strong>
+                <p>Saved cookies & credentials for automatic header injection.</p>
               </div>
-
-              <div className="extension-guide-actions">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={openExtensionFolder}
-                >
-                  <FolderIcon width={15} height={15} /> Open Extension Folder
-                </button>
-              </div>
-
-              <div className="extension-steps">
-                <div className="step-item">
-                  <span className="step-num">1</span>
-                  <div className="step-body">
-                    <strong>Chrome, Edge & Brave:</strong>
-                    <span>Open <code>chrome://extensions</code> or <code>edge://extensions</code>, enable <em>Developer mode</em>, and click <em>Load unpacked</em> on the extension folder.</span>
-                  </div>
-                </div>
-
-                <div className="step-item">
-                  <span className="step-num">2</span>
-                  <div className="step-body">
-                    <strong>Firefox:</strong>
-                    <span>Open <code>about:debugging#/runtime/this-firefox</code>, click <em>Load Temporary Add-on…</em> and select <code>manifest.json</code> in the extension folder.</span>
-                  </div>
-                </div>
+              
+              <div className="vault-list">
+                {vault.map((entry, i) => (
+                    <div key={i} className="vault-entry">
+                        <input value={entry.domain} placeholder="Domain (e.g. example.com)" onChange={(e) => updateVaultEntry(i, "domain", e.target.value)} />
+                        <input value={entry.auth_user || ""} placeholder="Auth User" onChange={(e) => updateVaultEntry(i, "auth_user", e.target.value)} />
+                        <input type="password" value={entry.auth_pass || ""} placeholder="Auth Pass" onChange={(e) => updateVaultEntry(i, "auth_pass", e.target.value)} />
+                        <input value={entry.cookies || ""} placeholder="Cookies (name=value;...)" onChange={(e) => updateVaultEntry(i, "cookies", e.target.value)} />
+                        <button className="icon-btn danger" onClick={() => removeVaultEntry(i)}><TrashIcon/></button>
+                    </div>
+                ))}
+                <button className="btn btn-sm" onClick={addVaultEntry}><PlusIcon/> Add Entry</button>
               </div>
             </div>
           )}

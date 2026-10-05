@@ -90,6 +90,18 @@ impl Default for Settings {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VaultEntry {
+    pub domain: String,
+    pub auth_user: Option<String>,
+    pub auth_pass: Option<String>,
+    pub cookies: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Vault(pub Vec<VaultEntry>);
+
+
 pub fn detect_category(filename_or_uri: &str) -> Option<&'static str> {
     let clean = filename_or_uri.split('?').next().unwrap_or(filename_or_uri);
     let clean = clean.split('#').next().unwrap_or(clean);
