@@ -32,6 +32,34 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "progress", label: "Progress" },
 ];
 
+export type SpeedProfileKey = "max" | "gaming" | "eco" | "custom";
+
+const PROFILES: {
+  key: SpeedProfileKey;
+  label: string;
+  speedLimit: number;
+  concurrency: number;
+}[] = [
+  {
+    key: "max",
+    label: "⚡ Max Speed",
+    speedLimit: 0,
+    concurrency: 5,
+  },
+  {
+    key: "gaming",
+    label: "🎮 Gaming / Stream (2 MB/s)",
+    speedLimit: 2 * 1024 * 1024,
+    concurrency: 2,
+  },
+  {
+    key: "eco",
+    label: "🌱 Eco Saver (500 KB/s)",
+    speedLimit: 500 * 1024,
+    concurrency: 1,
+  },
+];
+
 export default function Toolbar({
   query,
   onQuery,
@@ -40,9 +68,47 @@ export default function Toolbar({
   sort,
   onSort,
 }: Props) {
-  const { snapshot, pauseAll, resumeAll, clearFinished, connected, remove, addDownload, settings } =
-    useAria2();
+  const {
+    snapshot,
+    pauseAll,
+    resumeAll,
+    clearFinished,
+    connected,
+    remove,
+    addDownload,
+    settings,
+    updateSettings,
+  } = useAria2();
   const { push } = useToast();
+
+  const currentProfile: SpeedProfileKey = useMemo(() => {
+    if (!settings) return "max";
+    for (const p of PROFILES) {
+      if (
+        settings.global_speed_limit === p.speedLimit &&
+        settings.max_concurrent_downloads === p.concurrency
+      ) {
+        return p.key;
+      }
+    }
+    return "custom";
+  }, [settings]);
+
+  const setProfile = async (key: SpeedProfileKey) => {
+    if (!settings || key === "custom") return;
+    const target = PROFILES.find((p) => p.key === key);
+    if (!target) return;
+    try {
+      await updateSettings({
+        ...settings,
+        global_speed_limit: target.speedLimit,
+        max_concurrent_downloads: target.concurrency,
+      });
+      push(`Speed profile: ${target.label}`, "info");
+    } catch (e) {
+      push(`Failed to set profile: ${e}`, "error");
+    }
+  };
 
   const addTorrent = async () => {
     const path = await open({
@@ -126,6 +192,24 @@ export default function Toolbar({
             {o.label}
           </option>
         ))}
+      </select>
+
+      <select
+        className="sort-select profile-select"
+        value={currentProfile}
+        onChange={(e) => void setProfile(e.target.value as SpeedProfileKey)}
+        title="Quick speed profile"
+      >
+        {PROFILES.map((p) => (
+          <option key={p.key} value={p.key}>
+            {p.label}
+          </option>
+        ))}
+        {currentProfile === "custom" && (
+          <option value="custom" disabled>
+            ⚙️ Custom Mode
+          </option>
+        )}
       </select>
 
       <div className="toolbar-actions">

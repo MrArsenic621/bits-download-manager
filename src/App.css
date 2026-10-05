@@ -436,6 +436,11 @@ body {
   cursor: pointer;
 }
 
+.profile-select {
+  font-weight: 500;
+  color: var(--text);
+}
+
 .bulk-bar {
   display: flex;
   align-items: center;

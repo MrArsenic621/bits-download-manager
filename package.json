@@ -1,7 +1,7 @@
 {
   "name": "bits-download-manager",
   "private": true,
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "A fast, modern download manager for Windows powered by aria2",
   "type": "module",
   "scripts": {
