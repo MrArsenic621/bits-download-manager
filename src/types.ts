@@ -69,6 +69,7 @@ export interface StreamFormat {
   ext: string;
   resolution: string | null;
   note: string | null;
+  url: string;
 }
 
 export interface StreamMetadata {

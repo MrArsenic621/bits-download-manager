@@ -542,12 +542,17 @@ async fn fetch_stream_metadata(url: String, cookie: Option<String>, app: tauri::
         if let Some(fmts) = root.get("formats").and_then(|v| v.as_array()) {
             for f in fmts {
                 // Filter meaningful video/audio formats
-                if let (Some(fmt_id), Some(ext)) = (f.get("format_id").and_then(|v| v.as_str()), f.get("ext").and_then(|v| v.as_str())) {
+                if let (Some(fmt_id), Some(ext), Some(url)) = (
+                    f.get("format_id").and_then(|v| v.as_str()),
+                    f.get("ext").and_then(|v| v.as_str()),
+                    f.get("url").and_then(|v| v.as_str()),
+                ) {
                     formats.push(model::StreamFormat {
                         format_id: fmt_id.to_string(),
                         ext: ext.to_string(),
                         resolution: f.get("resolution").and_then(|v| v.as_str()).map(|s| s.to_string()),
                         note: f.get("format_note").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        url: url.to_string(),
                     });
                 }
             }

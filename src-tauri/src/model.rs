@@ -109,6 +109,7 @@ pub struct StreamFormat {
     pub ext: String,
     pub resolution: Option<String>,
     pub note: Option<String>,
+    pub url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

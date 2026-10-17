@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { useAria2 } from "../context/Aria2Provider";
-import type { StreamMetadata } from "../types";
+import type { StreamMetadata, StreamFormat } from "../types";
 import { CloseIcon, DownloadIcon, FolderIcon } from "../lib/icons";
 
 // Helper for streaming detection
@@ -44,6 +44,7 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
   
   // Streaming state
   const [metadata, setMetadata] = useState<StreamMetadata | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<StreamFormat | null>(null);
   const [fetching, setFetching] = useState(false);
 
   const browse = async () => {
@@ -84,13 +85,10 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
     setBusy(true);
     setError(null);
     try {
-      // If we have stream metadata, use the selected format's extraction URL (this is a limitation in the current backend design)
-      // Actually the current `fetch_stream_metadata` returns raw formats but `addDownload` takes a URL.
-      // This implementation needs refinement to pass the raw stream URL to addDownload.
-      // For now, let's keep it simple.
       for (const uri of lines) {
+        const downloadUri = selectedFormat ? selectedFormat.url : uri;
         await addDownload({
-          uri,
+          uri: downloadUri,
           dir: dir.trim() || undefined,
           out: lines.length === 1 ? (out.trim() || undefined) : undefined,
           split,
@@ -229,8 +227,9 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
               <span className="field-label">Stream Format: {metadata.title}</span>
               <select
                 className="select"
-                onChange={() => {
-                  /* handle select */
+                onChange={(e) => {
+                  const fmt = metadata.formats.find(f => f.format_id === e.target.value);
+                  setSelectedFormat(fmt || null);
                 }}
               >
                 <option value="">Select a format...</option>
