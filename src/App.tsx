@@ -24,7 +24,19 @@ function extractUrls(text: string): string[] {
 }
 
 export function isStreamingUrl(url: string): boolean {
-  return url.includes("youtube.com") || url.includes("youtu.be");
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("youtube.com") ||
+    lower.includes("youtu.be") ||
+    lower.includes("twitch.tv") ||
+    lower.includes("vimeo.com") ||
+    lower.includes("soundcloud.com") ||
+    lower.includes("dailymotion.com") ||
+    lower.includes("tiktok.com") ||
+    lower.includes("twitter.com") ||
+    lower.includes("x.com") ||
+    lower.includes("instagram.com")
+  );
 }
 
 export default function App() {

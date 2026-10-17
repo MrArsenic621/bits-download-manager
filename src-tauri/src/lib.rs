@@ -452,7 +452,7 @@ async fn shutdown_pc(action: String) -> Result<(), String> {
 
 /// Fetch stream metadata using yt-dlp.
 #[tauri::command]
-async fn fetch_stream_metadata(url: String, state: tauri::State<'_, AppState>) -> Result<model::StreamMetadata, String> {
+async fn fetch_stream_metadata(url: String, cookie: Option<String>, state: tauri::State<'_, AppState>) -> Result<model::StreamMetadata, String> {
     let app_data = state
         .settings_path
         .parent()
@@ -477,6 +477,8 @@ async fn fetch_stream_metadata(url: String, state: tauri::State<'_, AppState>) -
     }
 
     let settings = state.settings.lock().unwrap().clone();
+    let cookie_val = cookie.clone();
+    let bin_dir_clone = bin_dir.clone();
 
     tauri::async_runtime::spawn_blocking(move || {
         let mut cmd = std::process::Command::new(ytdlp_path);
@@ -484,6 +486,22 @@ async fn fetch_stream_metadata(url: String, state: tauri::State<'_, AppState>) -
         
         if !settings.global_proxy.is_empty() {
             cmd.args(["--proxy", &settings.global_proxy]);
+        }
+
+        if let Some(c) = cookie_val {
+            let c_trimmed = c.trim();
+            if !c_trimmed.is_empty() {
+                if c_trimmed.eq_ignore_ascii_case("chrome") || c_trimmed.eq_ignore_ascii_case("firefox") || c_trimmed.eq_ignore_ascii_case("edge") {
+                    cmd.args(["--cookies-from-browser", c_trimmed]);
+                } else if std::path::Path::new(c_trimmed).exists() {
+                    cmd.args(["--cookies", c_trimmed]);
+                } else {
+                    let cookie_path = bin_dir_clone.join("temp_cookies.txt");
+                    if std::fs::write(&cookie_path, c_trimmed).is_ok() {
+                        cmd.args(["--cookies", cookie_path.to_str().unwrap()]);
+                    }
+                }
+            }
         }
         
         #[cfg(windows)]

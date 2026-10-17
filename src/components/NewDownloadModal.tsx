@@ -7,7 +7,19 @@ import { CloseIcon, DownloadIcon, FolderIcon } from "../lib/icons";
 
 // Helper for streaming detection
 function isStreamingUrl(url: string): boolean {
-  return url.includes("youtube.com") || url.includes("youtu.be");
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("youtube.com") ||
+    lower.includes("youtu.be") ||
+    lower.includes("twitch.tv") ||
+    lower.includes("vimeo.com") ||
+    lower.includes("soundcloud.com") ||
+    lower.includes("dailymotion.com") ||
+    lower.includes("tiktok.com") ||
+    lower.includes("twitter.com") ||
+    lower.includes("x.com") ||
+    lower.includes("instagram.com")
+  );
 }
 
 interface Props {
@@ -44,21 +56,25 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
 
-  // Auto-detect stream metadata when URIs change
+  // Auto-detect stream metadata when URIs change or cookie updates
   useEffect(() => {
-    if (lines.length === 1 && isStreamingUrl(lines[0]) && !metadata && !fetching) {
+    if (lines.length === 1 && isStreamingUrl(lines[0]) && !fetching) {
       setFetching(true);
-      invoke<StreamMetadata>("fetch_stream_metadata", { url: lines[0] })
+      setError(null);
+      invoke<StreamMetadata>("fetch_stream_metadata", { url: lines[0], cookie: cookie.trim() || undefined })
         .then((data) => {
           setMetadata(data);
           setFetching(false);
         })
         .catch((e) => {
-          setError(`Stream detection failed: ${e}`);
+          setError(`Stream detection failed: ${e}. (Tip: For YouTube or protected streams, enter browser name e.g. 'chrome' or cookies in Cookie field).`);
           setFetching(false);
+          setMetadata(null);
         });
+    } else if (lines.length !== 1 || !isStreamingUrl(lines[0] ?? "")) {
+      setMetadata(null);
     }
-  }, [uris, metadata, fetching]);
+  }, [uris, cookie]);
 
   const start = async () => {
     if (lines.length === 0) {
@@ -213,7 +229,7 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
               <span className="field-label">Stream Format: {metadata.title}</span>
               <select
                 className="select"
-                onChange={(e) => {
+                onChange={() => {
                   /* handle select */
                 }}
               >
