@@ -450,31 +450,49 @@ async fn shutdown_pc(action: String) -> Result<(), String> {
     .map_err(|e| e.to_string())?
 }
 
+fn resolve_ytdlp_path(app: &tauri::AppHandle, app_data: &PathBuf) -> Result<PathBuf, String> {
+    let bin_dir = app_data.join("bin");
+    let target = bin_dir.join("yt-dlp.exe");
+
+    if target.exists() {
+        return Ok(target);
+    }
+
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("bin").join("windows").join("yt-dlp.exe"));
+    if let Ok(res) = app.path().resource_dir() {
+        candidates.push(res.join("bin").join("windows").join("yt-dlp.exe"));
+        candidates.push(res.join("yt-dlp.exe"));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("yt-dlp.exe"));
+        }
+    }
+
+    for candidate in candidates {
+        if candidate.exists() {
+            std::fs::create_dir_all(&bin_dir).map_err(|e| e.to_string())?;
+            std::fs::copy(&candidate, &target).map_err(|e| e.to_string())?;
+            return Ok(target);
+        }
+    }
+
+    Err("yt-dlp binary not found — bundled binary is missing".into())
+}
+
 /// Fetch stream metadata using yt-dlp.
 #[tauri::command]
-async fn fetch_stream_metadata(url: String, cookie: Option<String>, state: tauri::State<'_, AppState>) -> Result<model::StreamMetadata, String> {
+async fn fetch_stream_metadata(url: String, cookie: Option<String>, app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<model::StreamMetadata, String> {
     let app_data = state
         .settings_path
         .parent()
         .map(PathBuf::from)
         .unwrap_or_default();
     
-    // Resolve yt-dlp path (bundled as resource)
+    let ytdlp_path = resolve_ytdlp_path(&app, &app_data)?;
     let bin_dir = app_data.join("bin");
-    let ytdlp_path = bin_dir.join("yt-dlp.exe");
-
-    // Copy from resources if not already in app_data (same pattern as aria2)
-    if !ytdlp_path.exists() {
-        if let Ok(exe) = std::env::current_exe() {
-            if let Some(dir) = exe.parent() {
-                 let fallback = dir.join("yt-dlp.exe");
-                 if fallback.exists() {
-                    std::fs::create_dir_all(&bin_dir).map_err(|e| e.to_string())?;
-                    std::fs::copy(&fallback, &ytdlp_path).map_err(|e| e.to_string())?;
-                 }
-            }
-        }
-    }
 
     let settings = state.settings.lock().unwrap().clone();
     let cookie_val = cookie.clone();
