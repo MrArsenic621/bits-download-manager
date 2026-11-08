@@ -19,8 +19,8 @@
 | Stream engine | Embedded `yt-dlp.exe` (requires Node.js at runtime) |
 | Browser integration | Manifest V3 extension + local TCP bridge (`127.0.0.1:6801`) |
 
-**Current version:** `3.1.8`
-**Latest tag:** `v3.1.8`
+**Current version:** `3.1.9`
+**Latest tag:** `v3.1.9`
 **Branch:** `main`
 
 ---
@@ -114,6 +114,7 @@ cargo test  --manifest-path src-tauri/Cargo.toml   # spins up mock server + aria
 | `v3.1.1–3.1.6` | Fixes | Modal scroll/padding, platform detection (Twitch/Vimeo/etc.), cookie auth, yt-dlp path resolution, direct-URL handoff |
 | `v3.1.7` | **Stream engine rewrite** | Downloads routed through `yt-dlp` (HLS/DASH stitching + muxing); Node.js runtime requirement |
 | `v3.1.8` | Dependency repair | Reverted dependabot lockfile breakage (see §7) |
+| `v3.1.9` | Security pass | tauri → 2.12.5; quinn-proto 0.11.19; aws-lc-sys 0.47.0; rustls-webpki 0.103.16 (see §7) |
 
 ---
 
@@ -226,11 +227,45 @@ Auto-merged Dependabot PRs **broke `main`** before `v3.1.8`:
 **Fix applied in `v3.1.8`:** restored the last known-good `Cargo.lock` and pinned
 `rand = "0.8"`.
 
-**Outstanding:** GitHub still reports 3 Dependabot alerts (1 moderate, 2 low). These
-must be upgraded *together and compatibly* — do not blindly merge Dependabot PRs.
-A safe upgrade requires bumping `tauri` + `tauri-build` + plugins as a set and
-migrating `aria2.rs` to the rand 0.10 API (`rand::rng()`, `rand::distr::Alphanumeric`)
-if moving rand forward.
+### Security pass in `v3.1.9` (resolved)
+
+A semver-compatible `cargo update` plus a targeted tauri bump cleared the requested
+advisories:
+
+| Crate | Was | Now | Notes |
+|---|---|---|---|
+| `tauri` (+ runtime/wry/plugins) | 2.10.2 | **2.12.5** | consistent set: `tauri-runtime` 2.12.2, `tauri-runtime-wry` 2.12.3, `wry` 0.57.1, `tao` 0.37.2, `tauri-build` 2.7.4 |
+| `quinn-proto` | 0.11.13 | **0.11.19** | pulled via `reqwest`/`quinn` (optional HTTP/3); not built on Windows |
+| `aws-lc-sys` | 0.37.0 | **0.47.0** | via `aws-lc-rs` 1.19.0 ← `rustls` 0.23.36 |
+| `rustls-webpki` | 0.103.9 | **0.103.16** | |
+
+Verified with `cargo check`, `cargo test` (4/4 pass), and `bun run build`.
+
+> ⚠️ **Do not re-run a bare `cargo update -p tauri` expecting a bump.** The first
+> semver update kept tauri at 2.10.2; an explicit
+> `cargo update -p tauri --precise 2.12.5` was required to move the whole stack.
+> Always verify `tauri`/`tauri-runtime`/`tauri-runtime-wry`/`wry` moved together.
+
+### `glib` — blocked upstream (cannot fix by bumping a parent)
+
+Dependabot wants `glib >= 0.20.0`, but it is **not fixable in this repo right now**:
+
+- `glib 0.18.5` is pulled by `gtk 0.18.2` (the Linux GTK3 binding).
+- `gtk 0.18` requires `glib = "^0.18"`, so Cargo rejects `glib 0.20.0`
+  (`failed to select a version for the requirement glib = "^0.18"`).
+- The crate that installs `gtk` is **tauri**, and *both* the latest stable
+  `tauri 2.12.5` **and** `tauri 3.0.0-alpha.6` still pin `gtk = "0.18"`.
+  There is no tauri release that moves to the GTK 0.19+ line (which uses glib 0.22).
+
+**Impact:** `glib`/`gtk` are **Linux-only** target dependencies. This is a
+Windows-only app, so they are never compiled into the shipped binary. The alert can
+be dismissed as "vulnerable code not in path" / "no fix available upstream" until
+tauri adopts gtk 0.19+.
+
+**Outstanding (other alerts):** GitHub still reports additional Dependabot alerts
+beyond the four addressed here. Remediate with another semver-compatible
+`cargo update` + `cargo check`/`cargo test`, and re-run `bun run build`. Never blindly
+merge Dependabot PRs (see the `v3.1.8` incident above).
 
 ---
 
