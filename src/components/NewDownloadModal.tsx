@@ -28,7 +28,7 @@ interface Props {
 }
 
 export default function NewDownloadModal({ onClose, initialUri }: Props) {
-  const { addDownload } = useAria2();
+  const { addDownload, settings } = useAria2();
   const [uris, setUris] = useState(initialUri ?? "");
   const [dir, setDir] = useState("");
   const [out, setOut] = useState("");
@@ -57,25 +57,56 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
 
-  // Auto-detect stream metadata when URIs change or cookie updates
+  // Auto-detect stream metadata when URIs change or cookie updates.
+  // Debounced so typing/pasting a cookie file doesn't spawn a yt-dlp per keystroke;
+  // stale responses from a superseded request are ignored.
   useEffect(() => {
-    if (lines.length === 1 && isStreamingUrl(lines[0]) && !fetching) {
+    if (lines.length === 1 && isStreamingUrl(lines[0])) {
+      let cancelled = false;
       setFetching(true);
       setError(null);
-      invoke<StreamMetadata>("fetch_stream_metadata", { url: lines[0], cookie: cookie.trim() || undefined })
-        .then((data) => {
-          setMetadata(data);
-          setFetching(false);
-        })
-        .catch((e) => {
-          setError(`Stream detection failed: ${e}. (Tip: For YouTube or protected streams, enter browser name e.g. 'chrome' or cookies in Cookie field).`);
-          setFetching(false);
-          setMetadata(null);
-        });
+      const timer = setTimeout(() => {
+        invoke<StreamMetadata>("fetch_stream_metadata", { url: lines[0], cookie: cookie.trim() || undefined })
+          .then((data) => {
+            if (cancelled) return;
+            setMetadata(data);
+            setFetching(false);
+          })
+          .catch((e) => {
+            if (cancelled) return;
+            const message = String(e);
+            // Only talk about cookies when the failure is actually an auth failure,
+            // so a working saved cookie never produces noise.
+            const authIssue =
+              /confirm you.{0,4}re not a bot|cookies are no longer valid|sign in to confirm|login required|use --cookies/i.test(
+                message,
+              );
+            if (authIssue) {
+              const local = cookie.trim();
+              const saved = settings?.youtube_cookie?.trim();
+              setError(
+                local
+                  ? "The cookie you entered was rejected (invalid or expired). Check it and try again."
+                  : saved
+                    ? "The saved YouTube cookie was rejected (invalid or expired). Update it in Settings → General."
+                    : "YouTube requires a signed-in cookie. Add one once in Settings → General (or paste it in the Cookie field).",
+              );
+            } else {
+              setError(`Stream detection failed: ${message}`);
+            }
+            setFetching(false);
+            setMetadata(null);
+          });
+      }, 400);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
     } else if (lines.length !== 1 || !isStreamingUrl(lines[0] ?? "")) {
       setMetadata(null);
+      setFetching(false);
     }
-  }, [uris, cookie]);
+  }, [uris, cookie, settings?.youtube_cookie]);
 
   const start = async () => {
     if (lines.length === 0) {
@@ -223,12 +254,13 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
               </label>
 
               <label className="field">
-                <span className="field-label">Cookie Header</span>
-                <input
+                <span className="field-label">Cookie Header / cookies.txt</span>
+                <textarea
                   value={cookie}
                   onChange={(e) => setCookie(e.target.value)}
-                  placeholder="session_id=...; token=..."
+                  placeholder={"Netscape cookie file contents (paste as-is), a cookies.txt path, or a browser name (chrome / firefox / edge)"}
                   spellCheck={false}
+                  rows={4}
                 />
               </label>
 

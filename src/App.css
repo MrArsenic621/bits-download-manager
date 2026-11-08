@@ -1029,6 +1029,18 @@ body {
   color: var(--text-faint);
 }
 
+.field-hint {
+  margin: -2px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.field-hint code {
+  font-family: var(--mono, ui-monospace, Consolas, monospace);
+  color: var(--text);
+}
+
 .field-row {
   display: flex;
   align-items: flex-end;

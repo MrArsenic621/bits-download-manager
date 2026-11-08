@@ -21,3 +21,32 @@ pub fn sanitize(mut s: Settings) -> Settings {
     s.default_dir = s.default_dir.trim().to_string();
     s
 }
+
+#[cfg(test)]
+mod tests {
+    use super::load;
+
+    #[test]
+    fn older_settings_files_keep_their_values_and_default_new_fields() {
+        let dir = std::env::temp_dir().join("bits_dm_settings_test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("settings.json");
+        // Pre-youtube_cookie shape: missing field must not reset the whole config.
+        std::fs::write(
+            &path,
+            r#"{"default_dir":"D:\\Downloads","default_split":8,"max_concurrent_downloads":2,
+                "global_speed_limit":0,"notify_on_complete":false,"watch_clipboard":true,
+                "auto_categorize":true,"schedule_enabled":false,"schedule_start_time":"01:00",
+                "schedule_stop_time":"07:00","shutdown_on_finish":false,"close_to_tray":true,
+                "global_proxy":"socks5://127.0.0.1:1080"}"#,
+        )
+        .unwrap();
+
+        let s = load(&path);
+        assert_eq!(s.default_dir, "D:\\Downloads");
+        assert_eq!(s.default_split, 8);
+        assert_eq!(s.global_proxy, "socks5://127.0.0.1:1080");
+        assert_eq!(s.youtube_cookie, "");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+}

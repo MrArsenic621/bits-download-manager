@@ -40,6 +40,7 @@ export default function SettingsModal({ onClose }: Props) {
           shutdown_on_finish: false,
           close_to_tray: true,
           global_proxy: "",
+          youtube_cookie: "",
         },
   );
   const [vault, setVault] = useState<any[]>([]);
@@ -197,6 +198,25 @@ export default function SettingsModal({ onClose }: Props) {
                   spellCheck={false}
                 />
               </label>
+
+              <label className="field">
+                <span className="field-label">YouTube cookie (cookies.txt)</span>
+                <textarea
+                  value={form.youtube_cookie}
+                  onChange={(e) => set("youtube_cookie", e.target.value)}
+                  placeholder="Paste a Netscape cookies.txt exported for youtube.com, a cookies.txt path, or a browser name (chrome / firefox / edge)"
+                  spellCheck={false}
+                  rows={5}
+                />
+              </label>
+              <p className="field-hint">
+                Used automatically for YouTube stream downloads — set it once and you
+                won't be asked again. To obtain it: sign in to YouTube in your browser,
+                export the site's cookies as a <code>cookies.txt</code> file with a
+                Netscape-format extension (e.g. "Get cookies.txt LOCALLY"), then paste
+                the whole file here. Keep it private — it acts as your login session.
+                Leave empty unless YouTube asks you to sign in.
+              </p>
 
               <label className="toggle-row">
                 <span>

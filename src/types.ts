@@ -62,6 +62,7 @@ export interface Settings {
   shutdown_on_finish: boolean;
   close_to_tray: boolean;
   global_proxy: string;
+  youtube_cookie: string;
 }
 
 export interface StreamFormat {

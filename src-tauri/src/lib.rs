@@ -9,7 +9,7 @@ mod vault;
 use aria2::{Aria2Process, RpcClient};
 use model::{Download, Settings, Snapshot, Vault};
 use serde_json::Value;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use sync::SyncContext;
 use tauri::Manager;
@@ -482,6 +482,84 @@ fn resolve_ytdlp_path(app: &tauri::AppHandle, app_data: &PathBuf) -> Result<Path
     Err("yt-dlp binary not found — bundled binary is missing".into())
 }
 
+/// Explicit per-download cookie wins; otherwise fall back to the saved YouTube
+/// cookie so it only has to be configured once.
+fn effective_cookie(explicit: Option<String>, saved: &str) -> Option<String> {
+    explicit.filter(|c| !c.trim().is_empty()).or_else(|| {
+        let saved = saved.trim();
+        (!saved.is_empty()).then(|| saved.to_string())
+    })
+}
+
+/// Add the cookie source to a yt-dlp invocation: browser name, cookies.txt path,
+/// or raw Netscape cookie contents (written to `<app_data>/bin/temp_cookies.txt`).
+fn apply_cookie_args(cmd: &mut std::process::Command, bin_dir: &Path, cookie: Option<String>) {
+    let Some(raw) = cookie else { return };
+    let cookie = raw.trim();
+    if cookie.is_empty() {
+        return;
+    }
+    if cookie.eq_ignore_ascii_case("chrome")
+        || cookie.eq_ignore_ascii_case("firefox")
+        || cookie.eq_ignore_ascii_case("edge")
+    {
+        cmd.args(["--cookies-from-browser", cookie]);
+    } else if Path::new(cookie).exists() {
+        cmd.args(["--cookies", cookie]);
+    } else {
+        let cookie_path = bin_dir.join("temp_cookies.txt");
+        if std::fs::write(&cookie_path, cookie).is_ok() {
+            if let Some(path) = cookie_path.to_str() {
+                cmd.args(["--cookies", path]);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod cookie_tests {
+    use super::{apply_cookie_args, effective_cookie};
+
+    #[test]
+    fn explicit_cookie_wins_over_saved() {
+        assert_eq!(
+            effective_cookie(Some("chrome".into()), "saved"),
+            Some("chrome".to_string())
+        );
+    }
+
+    #[test]
+    fn falls_back_to_saved_cookie() {
+        assert_eq!(
+            effective_cookie(None, "  .youtube.com\tTRUE\t/\tTRUE\t0\tSID\tx  "),
+            Some(".youtube.com\tTRUE\t/\tTRUE\t0\tSID\tx".to_string())
+        );
+    }
+
+    #[test]
+    fn blank_inputs_yield_none() {
+        assert_eq!(effective_cookie(Some("   ".into()), "  "), None);
+        assert_eq!(effective_cookie(None, ""), None);
+    }
+
+    #[test]
+    fn raw_cookie_contents_are_written_to_a_temp_file() {
+        let dir = std::env::temp_dir().join("bits_dm_cookie_test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let raw = "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tSID\tvalue";
+        let mut cmd = std::process::Command::new("yt-dlp");
+        apply_cookie_args(&mut cmd, &dir, Some(raw.to_string()));
+
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(args.first().map(String::as_str), Some("--cookies"));
+        assert_eq!(std::fs::read_to_string(&args[1]).unwrap(), raw);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+}
+
 /// Fetch stream metadata using yt-dlp.
 #[tauri::command]
 async fn fetch_stream_metadata(url: String, cookie: Option<String>, app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<model::StreamMetadata, String> {
@@ -495,32 +573,18 @@ async fn fetch_stream_metadata(url: String, cookie: Option<String>, app: tauri::
     let bin_dir = app_data.join("bin");
 
     let settings = state.settings.lock().unwrap().clone();
-    let cookie_val = cookie.clone();
+    let cookie_val = effective_cookie(cookie, &settings.youtube_cookie);
     let bin_dir_clone = bin_dir.clone();
 
     tauri::async_runtime::spawn_blocking(move || {
         let mut cmd = std::process::Command::new(ytdlp_path);
-        cmd.args(["--dump-json", "--no-warnings", &url]);
+        cmd.args(["--js-runtimes", "node", "--dump-json", "--no-warnings", &url]);
         
         if !settings.global_proxy.is_empty() {
             cmd.args(["--proxy", &settings.global_proxy]);
         }
 
-        if let Some(c) = cookie_val {
-            let c_trimmed = c.trim();
-            if !c_trimmed.is_empty() {
-                if c_trimmed.eq_ignore_ascii_case("chrome") || c_trimmed.eq_ignore_ascii_case("firefox") || c_trimmed.eq_ignore_ascii_case("edge") {
-                    cmd.args(["--cookies-from-browser", c_trimmed]);
-                } else if std::path::Path::new(c_trimmed).exists() {
-                    cmd.args(["--cookies", c_trimmed]);
-                } else {
-                    let cookie_path = bin_dir_clone.join("temp_cookies.txt");
-                    if std::fs::write(&cookie_path, c_trimmed).is_ok() {
-                        cmd.args(["--cookies", cookie_path.to_str().unwrap()]);
-                    }
-                }
-            }
-        }
+        apply_cookie_args(&mut cmd, &bin_dir_clone, cookie_val);
         
         #[cfg(windows)]
         {
@@ -612,7 +676,7 @@ async fn download_stream(
     };
 
     let url_clone = url.clone();
-    let cookie_clone = cookie.clone();
+    let cookie_clone = effective_cookie(cookie, &defaults.youtube_cookie);
     let format_id_clone = format_id.clone();
     let bin_dir = app_data.join("bin");
 
@@ -624,21 +688,7 @@ async fn download_stream(
             cmd.args(["-f", &fid]);
         }
 
-        if let Some(c) = cookie_clone {
-            let c_trimmed = c.trim();
-            if !c_trimmed.is_empty() {
-                if c_trimmed.eq_ignore_ascii_case("chrome") || c_trimmed.eq_ignore_ascii_case("firefox") || c_trimmed.eq_ignore_ascii_case("edge") {
-                    cmd.args(["--cookies-from-browser", c_trimmed]);
-                } else if std::path::Path::new(c_trimmed).exists() {
-                    cmd.args(["--cookies", c_trimmed]);
-                } else {
-                    let cookie_path = bin_dir.join("temp_cookies.txt");
-                    if std::fs::write(&cookie_path, c_trimmed).is_ok() {
-                        cmd.args(["--cookies", cookie_path.to_str().unwrap()]);
-                    }
-                }
-            }
-        }
+        apply_cookie_args(&mut cmd, &bin_dir, cookie_clone);
 
         #[cfg(windows)]
         {

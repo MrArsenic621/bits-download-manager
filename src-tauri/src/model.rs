@@ -70,6 +70,9 @@ pub struct Settings {
     pub shutdown_on_finish: bool,
     pub close_to_tray: bool,
     pub global_proxy: String,
+    /// Netscape cookies.txt contents / path / browser name used automatically for
+    /// yt-dlp stream requests (mainly YouTube). Empty = no saved cookie.
+    pub youtube_cookie: String,
 }
 
 impl Default for Settings {
@@ -88,6 +91,7 @@ impl Default for Settings {
             shutdown_on_finish: false,
             close_to_tray: true,
             global_proxy: String::new(),
+            youtube_cookie: String::new(),
         }
     }
 }

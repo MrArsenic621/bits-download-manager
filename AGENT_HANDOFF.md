@@ -140,9 +140,11 @@ Feeding those manifest URLs to `aria2c` saves the tiny playlist text, not the vi
 Both live in `src-tauri/src/lib.rs`.
 
 #### `fetch_stream_metadata(url, cookie) -> StreamMetadata`
-Runs `yt-dlp --dump-json` and returns `{ title, formats: StreamFormat[] }`.
-Each `StreamFormat` now includes the direct media `url` in addition to
-`format_id`, `ext`, `resolution`, `note`.
+Runs `yt-dlp --js-runtimes node --dump-json --no-warnings` and returns
+`{ title, formats: StreamFormat[] }`. Each `StreamFormat` includes the direct media
+`url` in addition to `format_id`, `ext`, `resolution`, `note`.
+`--js-runtimes node` is required here too — without it YouTube fails with
+"The page needs to be reloaded." (missing runtime, not a bad video).
 
 #### `download_stream(url, format_id, dir, out, cookie) -> String`
 Spawns `yt-dlp` in a background thread to perform the actual download:
@@ -152,10 +154,15 @@ yt-dlp --js-runtimes node --no-warnings -o "<dir>/%(title)s.%(ext)s" [-f <format
 ```
 
 - `--js-runtimes node` is **required** for YouTube's player challenge solving.
-- Cookie argument resolution (shared logic pattern used by both commands):
+- Cookie argument resolution is a shared `apply_cookie_args` helper used by **both**
+  commands:
   - `chrome` / `firefox` / `edge` → `--cookies-from-browser <name>`
   - an existing file path → `--cookies <path>`
-  - anything else → written to `<app_data>/bin/temp_cookies.txt`, then `--cookies <that>`
+  - anything else → treated as raw Netscape cookie-file contents, written to
+    `<app_data>/bin/temp_cookies.txt`, then passed as `--cookies <that>`
+- `effective_cookie` picks the cookie source: an explicit per-download value wins,
+  otherwise `Settings.youtube_cookie` (Settings → General) is used automatically.
+  The setting persists in `settings.json` (`#[serde(default)]`, so old files load).
 - Honors output dir, auto-categorization, custom filename.
 - ⚠️ **Proxy gap:** `fetch_stream_metadata` passes `--proxy <global_proxy>`, but
   `download_stream` currently does **not**. Add the same `--proxy` argument there
@@ -170,11 +177,21 @@ yt-dlp --js-runtimes node --no-warnings -o "<dir>/%(title)s.%(ext)s" [-f <format
 1. `isStreamingUrl()` matches: YouTube, Twitch, Vimeo, SoundCloud, Dailymotion,
    TikTok, Twitter/X, Instagram.
 2. On a single matching URL, `useEffect` calls `fetch_stream_metadata` automatically
-   (re-runs when the cookie field changes, so users can retry with cookies).
+   (debounced 400 ms; stale responses are cancelled). It re-runs when the URL, the
+   modal cookie, or the saved `youtube_cookie` changes. The modal Cookie field is a
+   per-download override; when empty the backend uses the saved setting.
 3. A format `<select>` appears; the chosen `format_id` is stored in `selectedFormat`.
 4. On submit:
    - **If metadata exists** → `invoke("download_stream", { url, formatId, dir, out, cookie })`.
    - **Otherwise** → normal `addDownload()` into aria2 (direct files, magnets, torrents).
+5. Cookie failures are reported **only when auth actually fails** (yt-dlp bot-check /
+   "cookies are no longer valid" / login-required errors). The message distinguishes
+   a rejected per-download cookie from a rejected saved cookie and points at
+   Settings → General. Successful fetches never prompt about cookies.
+
+> The Cookie input is a multi-line `<textarea>`: a single-line `<input>` collapses
+> pasted `cookies.txt` contents (newlines stripped), so tabs/line structure are lost
+> and yt-dlp rejects every entry. Netscape files are tab-separated — spaces do not work.
 
 ### 5.4 Node.js requirement
 
