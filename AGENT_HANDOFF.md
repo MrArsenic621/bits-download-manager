@@ -74,6 +74,10 @@
   multi-URL batches (only when `lines.length === 1`).
 - Version lives in **three** places and must stay in sync:
   `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`.
+- The npm Tauri packages must match the Rust `tauri` crate's **major.minor**:
+  `@tauri-apps/api` and `@tauri-apps/cli` are pinned `~2.12.4` against
+  `tauri 2.12.5`. `tauri build` aborts with a version-mismatch error if they drift
+  (caused the `v3.1.10` CI failure); bump both together with the crate.
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `chore:`.
 - After committing, create a semver tag (`vX.Y.Z`) and push both branch and tags.
 
