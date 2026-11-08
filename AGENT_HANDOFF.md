@@ -254,18 +254,32 @@ Dependabot wants `glib >= 0.20.0`, but it is **not fixable in this repo right no
 - `gtk 0.18` requires `glib = "^0.18"`, so Cargo rejects `glib 0.20.0`
   (`failed to select a version for the requirement glib = "^0.18"`).
 - The crate that installs `gtk` is **tauri**, and *both* the latest stable
-  `tauri 2.12.5` **and** `tauri 3.0.0-alpha.6` still pin `gtk = "0.18"`.
+  `tauri 2.12.5` **and** `tauri 3.0.0-alpha.6` still pull `gtk = "0.18"`.
   There is no tauri release that moves to the GTK 0.19+ line (which uses glib 0.22).
+- Re-verified 2026-11-08: `tauri 2.12.5` is the newest published 2.x (120 versions
+  on crates.io; `3.0.0-alpha.6` is the only 3.x), and `cargo update --dry-run`
+  offers **no** newer `gtk`/`glib`/`wry`/`tao`/`muda`/`tray-icon`/`webkit2gtk`.
+  glib 0.18 reverse deps (Linux target): `atk`, `cairo-rs`, `gdk`, `gtk`,
+  `libappindicator`, `muda`, `tao`, `tray-icon`, `webkit2gtk`, `wry`, `tauri`,
+  `tauri-runtime`, `tauri-runtime-wry` — a single crate bump cannot clear it.
+- `gtk 0.19.0` exists and requires `glib = "^0.22"`, but no tauri release uses it;
+  `tauri 3.0.0-alpha.6` merely makes `gtk 0.18` optional behind `gtk3`/`gtk4`
+  features while still listing the dependency. A real fix requires the tauri 3
+  line + GTK4 migration (and v3-alpha plugins), not viable on stable 2.x.
+- Advisory: **GHSA-wrw7-89jp-8q8g / RUSTSEC-2024-0429** (unsoundness in glib's
+  `Iterator`/`VariantStrIter`), first patched in `glib 0.20.0`.
 
 **Impact:** `glib`/`gtk` are **Linux-only** target dependencies. This is a
 Windows-only app, so they are never compiled into the shipped binary. The alert can
 be dismissed as "vulnerable code not in path" / "no fix available upstream" until
 tauri adopts gtk 0.19+.
 
-**Outstanding (other alerts):** GitHub still reports additional Dependabot alerts
-beyond the four addressed here. Remediate with another semver-compatible
-`cargo update` + `cargo check`/`cargo test`, and re-run `bun run build`. Never blindly
-merge Dependabot PRs (see the `v3.1.8` incident above).
+**Other alerts (2026-11-08):** cleared `serde_with` 3.16.1 → **3.21.0** (alert #16),
+`rand` 0.8.5 → **0.8.6** (alert #9), and `rand` 0.9.2 → **0.9.3** (alert #8, pulled by
+`tauri-plugin-notification`). None needed source changes; verified with `cargo check`,
+`cargo test` (4/4), `bun run build`. Remaining: `glib` (alert #1, blocked upstream as
+above) plus `rand 0.7.3`/`0.10.3`, which are outside the advisory ranges and unflagged.
+Never blindly merge Dependabot PRs (see the `v3.1.8` incident above).
 
 ---
 
