@@ -564,6 +564,94 @@ async fn fetch_stream_metadata(url: String, cookie: Option<String>, app: tauri::
     .map_err(|e| e.to_string())?
 }
 
+/// Download stream directly using yt-dlp.
+#[tauri::command]
+async fn download_stream(
+    state: tauri::State<'_, AppState>,
+    url: String,
+    format_id: Option<String>,
+    dir: Option<String>,
+    out: Option<String>,
+    cookie: Option<String>,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    let app_data = state
+        .settings_path
+        .parent()
+        .map(PathBuf::from)
+        .unwrap_or_default();
+    
+    let ytdlp_path = resolve_ytdlp_path(&app, &app_data)?;
+    let defaults = state.settings.lock().unwrap().clone();
+
+    let resolved_dir = if let Some(custom_dir) = dir.filter(|d| !d.trim().is_empty()) {
+        custom_dir
+    } else {
+        let base = if !defaults.default_dir.is_empty() {
+            PathBuf::from(&defaults.default_dir)
+        } else {
+            aria2::default_download_dir(&app_data)
+        };
+        if defaults.auto_categorize {
+            if let Some(category) = model::detect_category(&url) {
+                base.join(category).to_string_lossy().into_owned()
+            } else {
+                base.to_string_lossy().into_owned()
+            }
+        } else {
+            base.to_string_lossy().into_owned()
+        }
+    };
+
+    std::fs::create_dir_all(&resolved_dir).map_err(|e| e.to_string())?;
+
+    let output_template = if let Some(o) = out.filter(|s| !s.trim().is_empty()) {
+        PathBuf::from(&resolved_dir).join(o).to_string_lossy().into_owned()
+    } else {
+        PathBuf::from(&resolved_dir).join("%(title)s.%(ext)s").to_string_lossy().into_owned()
+    };
+
+    let url_clone = url.clone();
+    let cookie_clone = cookie.clone();
+    let format_id_clone = format_id.clone();
+    let bin_dir = app_data.join("bin");
+
+    std::thread::spawn(move || {
+        let mut cmd = std::process::Command::new(ytdlp_path);
+        cmd.args(["--js-runtimes", "node", "--no-warnings", "-o", &output_template, &url_clone]);
+
+        if let Some(fid) = format_id_clone.filter(|s| !s.trim().is_empty()) {
+            cmd.args(["-f", &fid]);
+        }
+
+        if let Some(c) = cookie_clone {
+            let c_trimmed = c.trim();
+            if !c_trimmed.is_empty() {
+                if c_trimmed.eq_ignore_ascii_case("chrome") || c_trimmed.eq_ignore_ascii_case("firefox") || c_trimmed.eq_ignore_ascii_case("edge") {
+                    cmd.args(["--cookies-from-browser", c_trimmed]);
+                } else if std::path::Path::new(c_trimmed).exists() {
+                    cmd.args(["--cookies", c_trimmed]);
+                } else {
+                    let cookie_path = bin_dir.join("temp_cookies.txt");
+                    if std::fs::write(&cookie_path, c_trimmed).is_ok() {
+                        cmd.args(["--cookies", cookie_path.to_str().unwrap()]);
+                    }
+                }
+            }
+        }
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+
+        let _ = cmd.status();
+    });
+
+    Ok("Stream download started via yt-dlp".into())
+}
+
 fn lookup_download(sync: &SyncContext, gid: &str) -> Option<Download> {
     let snapshot = sync.snapshot.lock().unwrap();
     snapshot
@@ -606,11 +694,21 @@ pub fn run() {
             let settings = settings::load(&settings_path);
             let settings = settings::sanitize(settings);
 
-            let (client, process, startup_error) = match Aria2Process::start(&handle, &settings) {
-                Ok((client, process)) => (Some(client), Some(process), None),
-                Err(e) => {
-                    eprintln!("failed to start aria2: {e}");
-                    (None, None, Some(e))
+            let node_available = std::process::Command::new("node")
+                .arg("--version")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+
+            let (client, process, startup_error) = if !node_available {
+                (None, None, Some("Node.js runtime is missing! yt-dlp requires Node.js for YouTube extraction (--js-runtimes node). Please install Node.js from https://nodejs.org".to_string()))
+            } else {
+                match Aria2Process::start(&handle, &settings) {
+                    Ok((client, process)) => (Some(client), Some(process), None),
+                    Err(e) => {
+                        eprintln!("failed to start aria2: {e}");
+                        (None, None, Some(e))
+                    }
                 }
             };
 
@@ -758,6 +856,7 @@ pub fn run() {
             calculate_checksum,
             shutdown_pc,
             fetch_stream_metadata,
+            download_stream,
             get_vault,
             update_vault,
         ])

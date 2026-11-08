@@ -13,6 +13,7 @@
 ## Features
 
 - **Multi-Connection Acceleration** — Splits files into up to 64 parallel connections via aria2 for maximum throughput.
+- **Stream & Video Grabber (`yt-dlp`)** — Paste a YouTube, Twitch, Vimeo, SoundCloud, TikTok, or other supported URL to list available resolutions and formats, then download with automatic HLS/DASH stitching and audio/video muxing. Browser-cookie authentication (`chrome`, `firefox`, `edge`, or a `cookies.txt` path) bypasses bot protection.
 - **Global & Per-Download Proxy Support** — Native SOCKS5/HTTP proxy support for both aria2 daemon and yt-dlp to bypass geo-restrictions or network throttling.
 - **Expanded Item Details** — Expandable download items showing per-file speed graphs, thread counts, and exact disk path.
 - **Drag & Drop Floating Drop-Zone** — Drag URLs, magnet links, or text directly from your browser and drop anywhere on the window to queue downloads.
@@ -73,6 +74,7 @@ bits-download-manager/
 - [Rust](https://www.rust-lang.org/) (latest stable)
 - [Bun](https://bun.sh/) (or Node.js / npm)
 - [Tauri v2 Prerequisites for Windows](https://tauri.app/start/prerequisites/)
+- [Node.js](https://nodejs.org/) **(required at runtime for the Stream Grabber)** — `yt-dlp` uses it as a JavaScript runtime (`--js-runtimes node`) to solve YouTube player challenges. The app checks for it on startup and shows a warning if it is missing.
 
 ### Development
 

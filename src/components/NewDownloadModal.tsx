@@ -85,10 +85,22 @@ export default function NewDownloadModal({ onClose, initialUri }: Props) {
     setBusy(true);
     setError(null);
     try {
+      // Recognized streaming URL: hand the whole job to yt-dlp (handles HLS/DASH
+      // manifests, segment stitching, and audio/video muxing natively).
+      if (metadata && lines.length === 1) {
+        await invoke("download_stream", {
+          url: lines[0],
+          formatId: selectedFormat?.format_id || undefined,
+          dir: dir.trim() || undefined,
+          out: out.trim() || undefined,
+          cookie: cookie.trim() || undefined,
+        });
+        onClose();
+        return;
+      }
       for (const uri of lines) {
-        const downloadUri = selectedFormat ? selectedFormat.url : uri;
         await addDownload({
-          uri: downloadUri,
+          uri,
           dir: dir.trim() || undefined,
           out: lines.length === 1 ? (out.trim() || undefined) : undefined,
           split,
